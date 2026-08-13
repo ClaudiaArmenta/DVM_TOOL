@@ -23,6 +23,11 @@
 
       "lang.label": "Language",
 
+      "table.copy": "Copy",
+      "table.csv": "CSV",
+      "table.copyTitle": "Copy this table to clipboard",
+      "table.csvTitle": "Download this table as CSV",
+
       "overview.title": "DVM Analyses",
       "overview.subtitle": "Run analyses individually or as a batch. Queries execute serially via a single DBACOCKPIT session.",
       "overview.selectLabel": "Select analyses to run or export:",
@@ -68,6 +73,11 @@
 
       "lang.label": "Idioma",
 
+      "table.copy": "Copiar",
+      "table.csv": "CSV",
+      "table.copyTitle": "Copiar esta tabla al portapapeles",
+      "table.csvTitle": "Descargar esta tabla como CSV",
+
       "overview.title": "Análisis DVM",
       "overview.subtitle": "Ejecuta los análisis de forma individual o por lotes. Las consultas se ejecutan en serie mediante una única sesión de DBACOCKPIT.",
       "overview.selectLabel": "Selecciona los análisis a ejecutar o exportar:",
@@ -112,6 +122,11 @@
       "btn.connect": "Conectar",
 
       "lang.label": "Idioma",
+
+      "table.copy": "Copiar",
+      "table.csv": "CSV",
+      "table.copyTitle": "Copiar esta tabela para a área de transferência",
+      "table.csvTitle": "Baixar esta tabela como CSV",
 
       "overview.title": "Análises DVM",
       "overview.subtitle": "Execute as análises individualmente ou em lote. As consultas são executadas em série por meio de uma única sessão do DBACOCKPIT.",

@@ -1696,10 +1696,10 @@ textarea.dvm-input,
 }
 .dvm-howto-disclaimer .bi { margin-top: 2px; flex: none; font-size: 15px; }
 
-/* What-the-tool-checks list on the landing (full width, accent bullets) */
+/* What-the-tool-checks list on the landing (full width, accent bullets).
+   No left divider — it reads as one unified box with the intro paragraph. */
 .dvm-scope-list {
-  list-style: none; margin: 4px 0 0; padding: 4px 0 4px 16px;
-  border-left: 3px solid var(--dvm-primary);
+  list-style: none; margin: 2px 0 0; padding: 0;
   display: flex; flex-direction: column; gap: 9px;
 }
 .dvm-scope-list li {
@@ -1711,3 +1711,26 @@ textarea.dvm-input,
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--dvm-primary);
 }
+
+/* Per-table Copy / CSV toolbar (see assets/table-tools.js) */
+.dvm-table-toolbar {
+  display: flex; justify-content: flex-end; gap: 6px;
+  padding: 6px 8px;
+  background: var(--dvm-subtle);
+  border-bottom: 1px solid var(--dvm-border);
+}
+.dvm-table-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--dvm-font); font-size: 11px; font-weight: 600;
+  color: var(--dvm-text-secondary);
+  background: var(--dvm-surface);
+  border: 1px solid var(--dvm-border); border-radius: var(--radius-pill);
+  padding: 4px 11px; cursor: pointer; transition: all var(--transition);
+}
+.dvm-table-btn:hover {
+  color: var(--dvm-primary); border-color: var(--dvm-primary);
+  background: var(--dvm-info-bg);
+}
+.dvm-table-btn .bi { font-size: 12px; }
+.dvm-table-btn.is-ok { color: var(--dvm-success); border-color: var(--dvm-success); }
+.dvm-table-btn.is-err { color: var(--dvm-error); border-color: var(--dvm-error); }

@@ -414,6 +414,9 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
                 alloc_col = col
             elif "HANA_USED" in col and "GB" in col:
                 used_col = col
+            elif ("MEMORY" in col or "MEM" in col) and "USED" in col and "GB" in col and not used_col:
+                # e.g. a literal "Memory Used (GB)" column (uploaded/offline data)
+                used_col = col
             elif "HANA_ALLOC" in col and "GB" in col and not alloc_col:
                 alloc_col = col
             elif "DISK" in col and "USED" in col and "GB" in col:

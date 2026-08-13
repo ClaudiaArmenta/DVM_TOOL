@@ -118,10 +118,14 @@ def results_table(
     df: Optional[pd.DataFrame],
     max_rows: int = 100,
     max_col_width: str = "300px",
+    name: Optional[str] = None,
 ) -> html.Div:
     """Render a pandas DataFrame as a professional styled HTML table.
 
     Column headers show a tooltip (title attribute) with their description.
+    Each table carries a Copy / CSV toolbar handled client-side by
+    assets/table-tools.js (copies/exports only the rows shown). ``name`` sets
+    the CSV download filename.
     """
     if df is None or df.empty:
         return html.Div(
@@ -184,8 +188,31 @@ def results_table(
         className="dvm-table-caption",
     )
 
+    # Per-table Copy / CSV toolbar (handled client-side by table-tools.js).
+    toolbar = html.Div(
+        [
+            html.Button(
+                [html.I(className="bi bi-clipboard"),
+                 html.Span("Copy", **{"data-i18n": "table.copy"})],
+                type="button", className="dvm-table-btn",
+                title="Copy this table to clipboard",
+                **{"data-table-copy": "1", "data-i18n-title": "table.copyTitle"},
+            ),
+            html.Button(
+                [html.I(className="bi bi-filetype-csv"),
+                 html.Span("CSV", **{"data-i18n": "table.csv"})],
+                type="button", className="dvm-table-btn",
+                title="Download this table as CSV",
+                **{"data-table-export": "1", "data-table-name": (name or "table"),
+                   "data-i18n-title": "table.csvTitle"},
+            ),
+        ],
+        className="dvm-table-toolbar",
+    )
+
     return html.Div(
         [
+            toolbar,
             html.Div(table, className="dvm-table-scroll"),
             caption,
         ],

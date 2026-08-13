@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dvm-tool",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["hcm_dvm/run.py"],
+      "port": 8051
+    }
+  ]
+}

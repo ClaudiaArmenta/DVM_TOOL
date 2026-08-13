@@ -98,6 +98,14 @@ def _build_header(version_options: List[str]) -> html.Div:
             ),
             html.Div(
                 [
+                    # Theme toggle (light/dark). Icon + behavior handled client-side
+                    # by the inline script in app.index_string; persists to localStorage.
+                    html.Button(
+                        html.I(className="bi bi-moon-stars"),
+                        id="btn-theme-toggle", className="dvm-btn-icon",
+                        n_clicks=0, title="Switch to dark theme",
+                        **{"aria-label": "Switch theme"},
+                    ),
                     html.Button(
                         [
                             html.Span("No version", id="header-version-text"),
@@ -389,10 +397,7 @@ def _build_overview_section(analyses) -> html.Div:
                             html.Strong("A5", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
                             html.Span("Partitioned column-store tables"),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
-                        html.Div([
-                            html.Strong("A6", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Native Storage Extension (NSE) tables, partitions, columns"),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
+                        # A6 (NSE) temporarily hidden — analysis is a work in progress.
                     ], style={"paddingLeft": "8px", "borderLeft": "3px solid var(--dvm-primary)",
                               "marginBottom": "4px"}),
                 ], className="dvm-info-card", style={"marginBottom": "20px", "padding": "14px 16px"}),

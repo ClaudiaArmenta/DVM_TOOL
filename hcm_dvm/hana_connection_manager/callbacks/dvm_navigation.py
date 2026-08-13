@@ -19,7 +19,7 @@ from hana_connection_manager.dvm.version_select import (
 from hana_connection_manager.dvm.registry import get_all_analyses, ANALYSIS_SPECS
 
 # All section IDs (overview + per-analysis)
-_ANALYSIS_IDS = [s["id"] for s in ANALYSIS_SPECS]
+_ANALYSIS_IDS = [s["id"] for s in ANALYSIS_SPECS if s.get("enabled", True)]
 _SECTION_IDS = ["overview"] + _ANALYSIS_IDS
 _SECTION_ELEM_IDS = [f"section-{sid}" for sid in _SECTION_IDS]
 _SIDEBAR_ITEM_IDS = ["sidebar-item-overview"] + [f"sidebar-item-{sid}" for sid in _ANALYSIS_IDS]

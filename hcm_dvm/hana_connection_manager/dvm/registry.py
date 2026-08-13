@@ -162,6 +162,10 @@ ANALYSIS_SPECS: List[Dict] = [
         "description": "Page-loadable (NSE) tables, partitions, and columns.",
         "icon": "bi-layers",
         "group": "nse",
+        # Temporarily disabled — NSE analysis is a work in progress. The full
+        # spec (queries, renderer, export sheets) is kept intact; flip this to
+        # True (or remove it) to re-enable everywhere.
+        "enabled": False,
         "queries": [
             {
                 "label": "NSE Tables",
@@ -185,8 +189,12 @@ ANALYSIS_SPECS: List[Dict] = [
 
 
 def get_all_analyses() -> List[Dict]:
-    """Return the ordered list of all analysis specs."""
-    return ANALYSIS_SPECS
+    """Return the ordered list of enabled analysis specs.
+
+    Specs with ``"enabled": False`` (e.g. A6 NSE, a work in progress) are
+    hidden from the UI and execution while remaining defined for later.
+    """
+    return [spec for spec in ANALYSIS_SPECS if spec.get("enabled", True)]
 
 
 def get_analysis_by_id(analysis_id: str) -> Dict:

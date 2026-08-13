@@ -177,7 +177,8 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids):
     After each analysis completes, its results are immediately available
     in state['results'][aid] for the poll callback to render incrementally.
     """
-    analyses = [s for s in ANALYSIS_SPECS if s["id"] in analysis_ids]
+    analyses = [s for s in ANALYSIS_SPECS
+                if s["id"] in analysis_ids and s.get("enabled", True)]
     total_queries = sum(len(spec["queries"]) for spec in analyses)
     for spec in analyses:
         if spec.get("enrichments"):

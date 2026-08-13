@@ -59,7 +59,7 @@
 
   /* Typography — Caprasimo display over Figtree body */
   --dvm-font: 'Figtree', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --dvm-font-heading: 'Caprasimo', Georgia, 'Times New Roman', serif;
+  --dvm-font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
   --dvm-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
 
   /* Spacing (4px base — unchanged, keeps existing layout rhythm) */
@@ -92,7 +92,7 @@
 }
 
 /* ─── Global Reset ──────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -1386,18 +1386,19 @@ h1, h2, h3, h4, h5, h6,
 .dvm-chart-title,
 .dvm-metric-value {
   font-family: var(--dvm-font-heading);
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-optical-sizing: auto;
+  letter-spacing: -0.005em;
 }
 
-/* Buttons also take the display face, as in the Organic kit */
+/* Buttons stay in the body face (Figtree) for legibility */
 .dvm-btn,
 .btn,
 .btn-primary,
 .btn-outline-primary,
 .btn-outline-secondary {
-  font-family: var(--dvm-font-heading) !important;
-  font-weight: 400 !important;
+  font-family: var(--dvm-font) !important;
+  font-weight: 600 !important;
   letter-spacing: 0.005em;
 }
 

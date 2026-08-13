@@ -971,13 +971,98 @@ body {
   outline: none !important;
 }
 
-/* Dropdown overrides */
+/* Dropdown overrides (dcc.Dropdown / react-select) — themed for light & dark */
 .Select-control {
   border-radius: var(--radius-md) !important;
   border-color: var(--dvm-border-input) !important;
+  background-color: var(--dvm-surface) !important;
+  color: var(--dvm-text) !important;
 }
 .Select-control:hover {
   border-color: var(--dvm-primary) !important;
+}
+.Select.is-open > .Select-control { background-color: var(--dvm-surface) !important; }
+/* Selected value + typed text + placeholder must stay readable on the surface */
+.Select-value-label,
+.Select--single > .Select-control .Select-value .Select-value-label,
+.Select-input > input {
+  color: var(--dvm-text) !important;
+}
+.Select-placeholder { color: var(--dvm-text-secondary) !important; }
+.Select-arrow { border-top-color: var(--dvm-text-secondary) !important; }
+/* The open menu + its options */
+.Select-menu-outer,
+.Select-menu {
+  background-color: var(--dvm-surface) !important;
+  border-color: var(--dvm-border) !important;
+  box-shadow: var(--shadow-dropdown) !important;
+}
+.Select-option {
+  background-color: var(--dvm-surface) !important;
+  color: var(--dvm-text) !important;
+}
+.Select-option.is-focused {
+  background-color: var(--dvm-info-bg) !important;
+  color: var(--dvm-text) !important;
+}
+.Select-option.is-selected {
+  background-color: var(--dvm-neutral-chip) !important;
+  color: var(--dvm-text) !important;
+}
+.Select-noresults { color: var(--dvm-text-secondary) !important; }
+
+/* Native Dash dropdown (dcc.Dropdown in Dash 3+/4 uses .dash-dropdown-*).
+   Themed so the trigger, popover menu and options stay readable in light
+   AND dark — fixes the unreadable dark-text-on-dark options in offline mode. */
+.dash-dropdown-trigger {
+  background-color: var(--dvm-surface) !important;
+  color: var(--dvm-text) !important;
+  border: 1px solid var(--dvm-border-input) !important;
+  border-radius: var(--radius-md) !important;
+}
+.dash-dropdown-trigger:hover { border-color: var(--dvm-primary) !important; }
+.dash-dropdown-value,
+.dash-dropdown-value-item { color: var(--dvm-text) !important; }
+.dash-dropdown-placeholder { color: var(--dvm-text-secondary) !important; }
+.dash-dropdown-arrow, .dash-dropdown-trigger svg { color: var(--dvm-text-secondary) !important; }
+
+.dash-dropdown-content,
+.dash-dropdown-options,
+.dash-options-list {
+  background-color: var(--dvm-surface) !important;
+  color: var(--dvm-text) !important;
+  border-color: var(--dvm-border) !important;
+}
+.dash-dropdown-content {
+  border: 1px solid var(--dvm-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-dropdown) !important;
+}
+.dash-dropdown-search {
+  background-color: var(--dvm-surface) !important;
+  color: var(--dvm-text) !important;
+  border: 1px solid var(--dvm-border-input) !important;
+  border-radius: var(--radius-sm) !important;
+}
+.dash-dropdown-search::placeholder { color: var(--dvm-text-secondary) !important; }
+
+.dash-dropdown-option,
+.dash-options-list-option {
+  color: var(--dvm-text) !important;
+  background-color: transparent !important;
+}
+.dash-dropdown-option:hover,
+.dash-options-list-option:hover,
+.dash-dropdown-option.highlighted,
+.dash-options-list-option.highlighted,
+.dash-options-list-option[aria-selected="true"] {
+  background-color: var(--dvm-info-bg) !important;
+  color: var(--dvm-text) !important;
+}
+.dash-dropdown-option.selected,
+.dash-options-list-option.selected {
+  background-color: var(--dvm-neutral-chip) !important;
+  color: var(--dvm-text) !important;
 }
 
 /* ─── Collapsible SQL ───────────────────────────────────────────────────── */
@@ -1610,3 +1695,19 @@ textarea.dvm-input,
   font-size: 12.5px; line-height: 1.5;
 }
 .dvm-howto-disclaimer .bi { margin-top: 2px; flex: none; font-size: 15px; }
+
+/* What-the-tool-checks list on the landing (full width, accent bullets) */
+.dvm-scope-list {
+  list-style: none; margin: 4px 0 0; padding: 4px 0 4px 16px;
+  border-left: 3px solid var(--dvm-primary);
+  display: flex; flex-direction: column; gap: 9px;
+}
+.dvm-scope-list li {
+  position: relative; padding-left: 18px;
+  font-size: 13.5px; line-height: 1.5; color: var(--dvm-text);
+}
+.dvm-scope-list li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--dvm-primary);
+}

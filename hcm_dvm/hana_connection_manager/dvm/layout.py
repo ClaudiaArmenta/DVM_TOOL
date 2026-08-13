@@ -259,7 +259,7 @@ def _build_sidebar(analyses) -> html.Div:
                     html.I(className=f"bi {icon}", style={"fontSize": "16px"}),
                     html.Div(
                         [
-                            html.Span(f"{short}: {title}", className="dvm-sidebar-label",
+                            html.Span(title, className="dvm-sidebar-label",
                                       **{"data-i18n": f"analysis.{spec['id']}.short"}),
                         ],
                         className="dvm-sidebar-text",
@@ -301,7 +301,7 @@ def _build_overview_section(analyses) -> html.Div:
     """Overview: Intro + Run All/Selected, Export All/Selected, summary cards."""
     # Checkboxes for selecting analyses
     checklist_options = [
-        {"label": f"  {s['id'].split('_')[0].upper()}: {s['title'].split(': ', 1)[-1]}",
+        {"label": f"  {s['title'].split(': ', 1)[-1]}",
          "value": s["id"]}
         for s in analyses
     ]
@@ -320,7 +320,7 @@ def _build_overview_section(analyses) -> html.Div:
                                    style={"fontSize": "18px", "color": "var(--dvm-primary)"}),
                             html.Div(
                                 [
-                                    html.Div(f"{short}: {spec['title'].split(': ', 1)[-1]}",
+                                    html.Div(spec['title'].split(': ', 1)[-1],
                                              className="dvm-analysis-card-title",
                                              **{"data-i18n": f"analysis.{spec['id']}.short"}),
                                     html.Div(spec.get("description", ""),
@@ -393,7 +393,7 @@ def _build_overview_section(analyses) -> html.Div:
                 ], style={"display": "flex", "gap": "14px", "alignItems": "flex-start",
                           "marginBottom": "16px"}),
 
-                # Intro text block
+                # Intro text block + full-width list of what the tool checks
                 html.Div([
                     html.P([
                         "This tool automates the ",
@@ -405,32 +405,23 @@ def _build_overview_section(analyses) -> html.Div:
                         "revision-specific SQL from the SQL Statement Collection "
                         "to identify space consumers, growth trends, and memory distribution."
                     ], style={"fontSize": "13px", "color": "var(--dvm-text-secondary)",
-                              "margin": "0 0 10px", "lineHeight": "1.5"}),
-                    html.Div([
-                        html.Div([
-                            html.Strong("A1", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Top tables by disk and memory size", **{"data-i18n": "info.a1"}),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
-                        html.Div([
-                            html.Strong("A2", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Memory & disk resource trend (~1 year, monthly)", **{"data-i18n": "info.a2"}),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
-                        html.Div([
-                            html.Strong("A3", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Memory distribution by subarea (pie chart)", **{"data-i18n": "info.a3"}),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
-                        html.Div([
-                            html.Strong("A4", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Top growing tables over last 30 days", **{"data-i18n": "info.a4"}),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
-                        html.Div([
-                            html.Strong("A5", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Partitioned column-store tables", **{"data-i18n": "info.a5"}),
-                        ], style={"fontSize": "12px", "marginBottom": "3px"}),
+                              "margin": "0 0 14px", "lineHeight": "1.5"}),
+                    html.Ul([
+                        html.Li("Top tables by disk and memory size",
+                                **{"data-i18n": "info.a1"}),
+                        html.Li("Memory & disk resource trend (~1 year, monthly)",
+                                **{"data-i18n": "info.a2"}),
+                        html.Li("Memory distribution by subarea (pie chart)",
+                                **{"data-i18n": "info.a3"}),
+                        html.Li("Top growing tables over last 30 days",
+                                **{"data-i18n": "info.a4"}),
+                        html.Li("Partitioned column-store tables",
+                                **{"data-i18n": "info.a5"}),
                         # A6 (NSE) temporarily hidden — analysis is a work in progress.
-                    ], style={"paddingLeft": "8px", "borderLeft": "3px solid var(--dvm-primary)",
-                              "marginBottom": "4px"}),
-                ], className="dvm-info-card", style={"marginBottom": "20px", "padding": "14px 16px"}),
+                    ], className="dvm-scope-list"),
+                ], className="dvm-info-card",
+                   style={"marginBottom": "20px", "padding": "16px 18px",
+                          "flexDirection": "column", "alignItems": "stretch"}),
 
                 # How-to (step-by-step) + slow-run disclaimer
                 html.Div(
@@ -448,11 +439,11 @@ def _build_overview_section(analyses) -> html.Div:
                         ),
                         html.Ol(
                             [
-                                html.Li("Pick the HANA revision (top-right) so each "
-                                        "analysis uses the matching SQL.",
-                                        **{"data-i18n": "howto.step1"}),
                                 html.Li("Connect to HANA via SAP GUI (DBACOCKPIT) with "
                                         "the Connect button.",
+                                        **{"data-i18n": "howto.step1"}),
+                                html.Li("Pick the HANA revision (top-right) so each "
+                                        "analysis uses the matching SQL.",
                                         **{"data-i18n": "howto.step2"}),
                                 html.Li("Select the analyses you want and press Run All "
                                         "or Run Selected.",
@@ -468,7 +459,7 @@ def _build_overview_section(analyses) -> html.Div:
                                 html.I(className="bi bi-hourglass-split"),
                                 html.Span("Some analyses run heavy SQL and can take a "
                                           "while. If a query seems slow, just give it "
-                                          "time — don't refresh. Results appear as each "
+                                          "time. Don't refresh. Results appear as each "
                                           "analysis finishes.",
                                           **{"data-i18n": "howto.disclaimer"}),
                             ],
@@ -582,7 +573,7 @@ def _build_analysis_section(spec) -> html.Div:
     """Build a single analysis section with Run + Export + results area."""
     aid = spec["id"]
     short = aid.split("_")[0].upper()
-    title = spec["title"]
+    title = spec["title"].split(": ", 1)[-1] if ": " in spec["title"] else spec["title"]
 
     return html.Div(
         html.Div(
@@ -654,8 +645,7 @@ def _build_offline_screen(analyses) -> html.Div:
     query_options = []
     for spec in analyses:
         for q in spec["queries"]:
-            short = spec["id"].split("_")[0].upper()
-            label = f"{short}: {q['label']}"
+            label = q['label']
             value = f"{spec['id']}::{q['label']}"
             query_options.append({"label": label, "value": value})
 
@@ -716,7 +706,9 @@ def _build_offline_screen(analyses) -> html.Div:
                             "color": "var(--dvm-text-secondary)",
                             "marginBottom": "4px", "display": "block"}),
                         dcc.Dropdown(id="offline-upload-target",
-                                     options=[{"label": s["title"], "value": s["id"]} for s in analyses],
+                                     options=[{"label": s["title"].split(": ", 1)[-1]
+                                               if ": " in s["title"] else s["title"],
+                                               "value": s["id"]} for s in analyses],
                                      value=analyses[0]["id"] if analyses else None,
                                      clearable=False, style={"fontSize": "13px", "maxWidth": "300px"}),
                     ], style={"marginBottom": "12px"}),

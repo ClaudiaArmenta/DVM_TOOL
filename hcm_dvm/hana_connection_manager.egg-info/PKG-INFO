@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: hana-connection-manager
+Version: 2.1.0
+Summary: SAP HANA Data Volume Management Tool with reusable connection layer
+Requires-Python: >=3.9
+Requires-Dist: dash>=2.14.0
+Requires-Dist: dash-bootstrap-components>=1.5.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: plotly>=5.0.0
+Requires-Dist: openpyxl>=3.1.0
+Provides-Extra: native
+Requires-Dist: hdbcli>=2.17.0; extra == "native"
+Provides-Extra: gui
+Requires-Dist: pywin32>=306; extra == "gui"
+Provides-Extra: all
+Requires-Dist: hdbcli>=2.17.0; extra == "all"
+Requires-Dist: pywin32>=306; extra == "all"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"

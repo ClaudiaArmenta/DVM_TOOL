@@ -17,11 +17,13 @@ from .components import results_table, status_badge, elapsed_badge, row_col_badg
 # PLOTLY THEME (consistent across all charts)
 # ═══════════════════════════════════════════════════════════════════════════
 
-_CHART_COLORS = ["#0070F2", "#E76500", "#107E3E", "#BB0000", "#7C3AED",
-                 "#0891B2", "#D97706", "#059669", "#DC2626", "#6366F1"]
+# Organic categorical series palette (mirrors --series-1…8 in assets/style.css),
+# padded to 10 with two deeper ramp steps.
+_CHART_COLORS = ["#0070f2", "#b8541a", "#2f7d6a", "#7b5ea7", "#a3123a",
+                 "#5b738b", "#b08a1e", "#3f7a2e", "#0d3673", "#8b4a0b"]
 
 _CHART_LAYOUT = dict(
-    font=dict(family="Inter, -apple-system, sans-serif", size=12, color="#556B82"),
+    font=dict(family="Figtree, system-ui, -apple-system, sans-serif", size=12, color="#556B82"),
     plot_bgcolor="white",
     paper_bgcolor="white",
     margin=dict(l=50, r=20, t=40, b=40),
@@ -569,7 +571,7 @@ def render_a3(results: List[dict], revision: str) -> html.Div:
             )])
             fig.update_layout(
                 height=420,
-                font=dict(family="Inter, -apple-system, sans-serif", size=12, color="#556B82"),
+                font=dict(family="Figtree, system-ui, -apple-system, sans-serif", size=12, color="#556B82"),
                 plot_bgcolor="white",
                 paper_bgcolor="white",
                 margin=dict(l=20, r=20, t=40, b=40),

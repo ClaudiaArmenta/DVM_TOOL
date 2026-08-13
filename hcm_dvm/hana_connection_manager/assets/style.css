@@ -1,44 +1,68 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   DVM Tool — Professional Design System (SAP Fiori / Horizon feel)
+   DVM Tool — "Organic" design system (warm, rounded, Caprasimo + Figtree)
+   Tokens keep their --dvm-* names so every component re-skins with no layout
+   changes; values come from the Organic theme (see design_system/styles.css).
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+/* ─── Design Tokens (Organic — light) ───────────────────────────────────── */
 :root {
-  /* Primary / Accent */
-  --dvm-primary: #0070F2;
-  --dvm-primary-hover: #0057D2;
-  --dvm-primary-active: #0040A0;
+  color-scheme: light;
+
+  /* Primary / Accent — Organic accent ramp (blue) */
+  --dvm-primary: #0070f2;          /* accent-500 */
+  --dvm-primary-hover: #005dc9;    /* accent-600 */
+  --dvm-primary-active: #0a49a0;   /* accent-700 */
   --dvm-primary-focus: rgba(0, 112, 242, 0.3);
 
+  /* Second accent — Organic terracotta (a genuine second voice) */
+  --dvm-accent-2: #b8541a;         /* accent-2 base */
+  --dvm-accent-2-hover: #ad5f10;   /* accent-2-600 */
+  --dvm-accent-2-active: #8b4a0b;  /* accent-2-700 */
+  --dvm-accent-2-bg: #fdf2e7;      /* accent-2-100 */
+  --dvm-accent-2-fg: #8b4a0b;      /* accent-2-700 (text on tint) */
+
   /* Text */
-  --dvm-text: #1D2D3E;
-  --dvm-text-secondary: #556B82;
-  --dvm-text-disabled: #8C9BAB;
+  --dvm-text: #1d2d3e;
+  --dvm-text-secondary: #5b6675;   /* neutral-700 */
+  --dvm-text-disabled: #a0aab5;    /* neutral-500 */
 
   /* Surfaces */
-  --dvm-bg: #F5F6F7;
-  --dvm-surface: #FFFFFF;
-  --dvm-subtle: #FAFBFC;
+  --dvm-bg: #f5f6f7;
+  --dvm-surface: #ffffff;
+  --dvm-subtle: #f7f8f9;           /* neutral-100 */
+  --dvm-neutral-chip: #eef0f2;     /* neutral-200 — small tinted fills */
 
   /* Borders */
-  --dvm-border: #E5E7EB;
-  --dvm-border-input: #D9DDE3;
+  --dvm-border: #dee3e8;           /* neutral-300 */
+  --dvm-border-input: #c2cad3;     /* neutral-400 */
+  --dvm-hairline: color-mix(in srgb, var(--dvm-text) 8%, transparent);
 
-  /* Semantic */
-  --dvm-success: #107E3E;
-  --dvm-success-bg: #E8F5E9;
-  --dvm-warning: #E76500;
-  --dvm-warning-bg: #FFF3E0;
-  --dvm-error: #BB0000;
-  --dvm-error-bg: #FBE9E9;
-  --dvm-info: #0070F2;
-  --dvm-info-bg: #EAF2FF;
+  /* Semantic (Organic status colors) */
+  --dvm-success: #1a7f43;
+  --dvm-success-bg: color-mix(in srgb, #1a7f43 12%, transparent);
+  --dvm-warning: #a35c00;
+  --dvm-warning-bg: color-mix(in srgb, #a35c00 14%, transparent);
+  --dvm-error: #b3261e;
+  --dvm-error-bg: color-mix(in srgb, #b3261e 12%, transparent);
+  --dvm-info: #0070f2;
+  --dvm-info-bg: #eaf3ff;          /* accent-100 */
 
-  /* Typography */
-  --dvm-font: 'Inter', -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Categorical series — Organic --series-1…8 (for charts, legends, dots) */
+  --series-1: #0070f2;
+  --series-2: #b8541a;
+  --series-3: #2f7d6a;
+  --series-4: #7b5ea7;
+  --series-5: #a3123a;
+  --series-6: #5b738b;
+  --series-7: #b08a1e;
+  --series-8: #3f7a2e;
+
+  /* Typography — Caprasimo display over Figtree body */
+  --dvm-font: 'Figtree', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --dvm-font-heading: 'Caprasimo', Georgia, 'Times New Roman', serif;
   --dvm-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
 
-  /* Spacing (4px base) */
+  /* Spacing (4px base — unchanged, keeps existing layout rhythm) */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -47,16 +71,20 @@
   --sp-6: 24px;
   --sp-8: 32px;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  /* Radius — Organic, over-rounded */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
   --radius-pill: 999px;
+  /* Aliases used by a few component rules */
+  --dvm-radius-sm: var(--radius-sm);
+  --dvm-radius: var(--radius-md);
+  --dvm-bg-subtle: var(--dvm-subtle);
 
-  /* Elevation */
-  --shadow-card: 0 1px 3px rgba(29,45,62,.08), 0 1px 2px rgba(29,45,62,.04);
-  --shadow-raised: 0 4px 12px rgba(29,45,62,.10), 0 2px 4px rgba(29,45,62,.06);
-  --shadow-dropdown: 0 8px 24px rgba(29,45,62,.12);
+  /* Elevation — Organic soft ink-tinted shadows on the light ground */
+  --shadow-card: 0 1px 2px color-mix(in srgb, #22303f 16%, transparent);
+  --shadow-raised: 0 3px 10px color-mix(in srgb, #22303f 18%, transparent);
+  --shadow-dropdown: 0 12px 32px color-mix(in srgb, #22303f 24%, transparent);
 
   /* Motion */
   --transition: 150ms ease;
@@ -64,7 +92,7 @@
 }
 
 /* ─── Global Reset ──────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -160,7 +188,7 @@ body {
 }
 .dvm-connection-badge.disconnected {
   color: var(--dvm-text-secondary);
-  background: #F0F1F3;
+  background: var(--dvm-neutral-chip);
 }
 
 /* ─── Primary Nav Tabs (left side) ─────────────────────────────────────── */
@@ -508,7 +536,7 @@ body {
 .dvm-badge-warning { color: var(--dvm-warning); background: var(--dvm-warning-bg); }
 .dvm-badge-error   { color: var(--dvm-error); background: var(--dvm-error-bg); }
 .dvm-badge-info    { color: var(--dvm-primary); background: var(--dvm-info-bg); }
-.dvm-badge-neutral { color: var(--dvm-text-secondary); background: #F0F1F3; }
+.dvm-badge-neutral { color: var(--dvm-text-secondary); background: var(--dvm-neutral-chip); }
 
 .dvm-pill {
   font-size: 11px;
@@ -528,7 +556,7 @@ body {
 .dvm-progress-track {
   width: 100%;
   height: 6px;
-  background: #EBEDF0;
+  background: var(--dvm-neutral-chip);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -701,7 +729,7 @@ body {
 
 .dvm-table tbody td {
   padding: 8px 12px;
-  border-bottom: 1px solid #F2F3F5;
+  border-bottom: 1px solid var(--dvm-hairline);
   color: var(--dvm-text);
   max-width: 300px;
   overflow: hidden;
@@ -1012,7 +1040,7 @@ body {
 
 /* ─── Skeleton loading ──────────────────────────────────────────────────── */
 .dvm-skeleton {
-  background: linear-gradient(90deg, #F0F1F3 25%, #E5E7EB 50%, #F0F1F3 75%);
+  background: linear-gradient(90deg, var(--dvm-neutral-chip) 25%, #E5E7EB 50%, var(--dvm-neutral-chip) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -1340,4 +1368,207 @@ body {
 /* Hide Dash debug/dev tools in production look */
 ._dash-error-menu {
   display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Organic layer — display type, over-rounded controls, second accent, states
+   Appended so it wins the cascade over the base component rules above.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* — Caprasimo display voice on headings & prominent titles (weight 400 only) — */
+h1, h2, h3, h4, h5, h6,
+.dvm-page-title,
+.dvm-section-title,
+.dvm-card-title,
+.dvm-header-title,
+.dvm-section-header h3,
+.dvm-version-panel-title,
+.dvm-chart-title,
+.dvm-metric-value {
+  font-family: var(--dvm-font-heading);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Buttons also take the display face, as in the Organic kit */
+.dvm-btn,
+.btn,
+.btn-primary,
+.btn-outline-primary,
+.btn-outline-secondary {
+  font-family: var(--dvm-font-heading) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.005em;
+}
+
+/* — Over-rounded frame: pill buttons, badges, tabs and single-line inputs — */
+.dvm-btn,
+.btn,
+.btn-primary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-sm,
+.dvm-btn-sm,
+.dvm-badge,
+.dvm-pill,
+.dvm-version-badge,
+.dvm-connection-badge,
+.dvm-version-control,
+.dvm-nav-tab,
+.dvm-tab-pill {
+  border-radius: var(--radius-pill) !important;
+}
+.dvm-input,
+input.form-control,
+input.dvm-input,
+.Select-control {
+  border-radius: var(--radius-pill) !important;
+}
+/* Multi-line fields stay softly rounded, not pill */
+textarea.form-control,
+textarea.dvm-input,
+.dvm-code-editor,
+.dvm-code-readonly,
+.dvm-sql-block {
+  border-radius: var(--radius-md) !important;
+}
+/* Containers lean into the large radius */
+.dvm-card,
+.dvm-card-static,
+.dvm-version-panel,
+.dvm-table-wrap,
+.dvm-table-container,
+.dvm-chart-card {
+  border-radius: var(--radius-lg);
+}
+
+/* — Terracotta second accent as a genuine second voice — */
+.dvm-badge-accent2,
+.dvm-badge-secondary {
+  color: var(--dvm-accent-2-fg);
+  background: var(--dvm-accent-2-bg);
+}
+.dvm-connection-badge.connected {
+  /* keep success green for connection status */
+}
+.dvm-version-badge {
+  color: var(--dvm-accent-2);
+  background: var(--dvm-accent-2-bg);
+}
+.dvm-btn-tertiary:hover:not(:disabled) {
+  color: var(--dvm-accent-2-hover);
+  background: var(--dvm-accent-2-bg);
+}
+
+/* — Themed interaction states (never browser defaults) — */
+:focus-visible {
+  outline: 2px solid var(--dvm-primary);
+  outline-offset: 2px;
+}
+::selection {
+  background: color-mix(in srgb, var(--dvm-primary) 30%, transparent);
+}
+
+/* ─── Dark mode ───────────────────────────────────────────────────────────
+   Same --dvm-* roles, Organic's second (violet-on-ink) palette. Follows the OS
+   unless <html data-theme="light">; force with data-theme="dark" or .theme-dark. */
+:root[data-theme="dark"],
+.theme-dark {
+  color-scheme: dark;
+  --dvm-primary: #8b6cf0;
+  --dvm-primary-hover: #a488f4;
+  --dvm-primary-active: #bda7f8;
+  --dvm-primary-focus: rgba(139, 108, 240, 0.35);
+
+  --dvm-accent-2: #e0813a;
+  --dvm-accent-2-hover: #e0934f;
+  --dvm-accent-2-active: #eeae79;
+  --dvm-accent-2-bg: #2c1a0c;
+  --dvm-accent-2-fg: #eeae79;
+
+  --dvm-text: #ece7f5;
+  --dvm-text-secondary: #a79fb5;
+  --dvm-text-disabled: #635a74;
+
+  --dvm-bg: #16121f;
+  --dvm-surface: #201a2c;
+  --dvm-subtle: #1f1929;
+  --dvm-neutral-chip: #282133;
+
+  --dvm-border: #332b40;
+  --dvm-border-input: #453b54;
+  --dvm-hairline: color-mix(in srgb, var(--dvm-text) 14%, transparent);
+
+  --dvm-success: #4ec38a;
+  --dvm-success-bg: color-mix(in srgb, #4ec38a 16%, transparent);
+  --dvm-warning: #e0a33a;
+  --dvm-warning-bg: color-mix(in srgb, #e0a33a 18%, transparent);
+  --dvm-error: #f2707a;
+  --dvm-error-bg: color-mix(in srgb, #f2707a 16%, transparent);
+  --dvm-info: #8b6cf0;
+  --dvm-info-bg: #241a3f;
+
+  --series-1: #8b6cf0;
+  --series-2: #e0813a;
+  --series-3: #4bbfa0;
+  --series-4: #6aabf7;
+  --series-5: #f2637f;
+  --series-6: #a79fb5;
+  --series-7: #e2c04a;
+  --series-8: #7cc86a;
+
+  --shadow-card: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-raised: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 4px 12px rgba(0,0,0,0.55);
+  --shadow-dropdown: 0 0 0 1px color-mix(in srgb, #ece7f5 11%, transparent), 0 16px 40px rgba(0,0,0,0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --dvm-primary: #8b6cf0;
+    --dvm-primary-hover: #a488f4;
+    --dvm-primary-active: #bda7f8;
+    --dvm-primary-focus: rgba(139, 108, 240, 0.35);
+
+    --dvm-accent-2: #e0813a;
+    --dvm-accent-2-hover: #e0934f;
+    --dvm-accent-2-active: #eeae79;
+    --dvm-accent-2-bg: #2c1a0c;
+    --dvm-accent-2-fg: #eeae79;
+
+    --dvm-text: #ece7f5;
+    --dvm-text-secondary: #a79fb5;
+    --dvm-text-disabled: #635a74;
+
+    --dvm-bg: #16121f;
+    --dvm-surface: #201a2c;
+    --dvm-subtle: #1f1929;
+    --dvm-neutral-chip: #282133;
+
+    --dvm-border: #332b40;
+    --dvm-border-input: #453b54;
+    --dvm-hairline: color-mix(in srgb, var(--dvm-text) 14%, transparent);
+
+    --dvm-success: #4ec38a;
+    --dvm-success-bg: color-mix(in srgb, #4ec38a 16%, transparent);
+    --dvm-warning: #e0a33a;
+    --dvm-warning-bg: color-mix(in srgb, #e0a33a 18%, transparent);
+    --dvm-error: #f2707a;
+    --dvm-error-bg: color-mix(in srgb, #f2707a 16%, transparent);
+    --dvm-info: #8b6cf0;
+    --dvm-info-bg: #241a3f;
+
+    --series-1: #8b6cf0;
+    --series-2: #e0813a;
+    --series-3: #4bbfa0;
+    --series-4: #6aabf7;
+    --series-5: #f2637f;
+    --series-6: #a79fb5;
+    --series-7: #e2c04a;
+    --series-8: #7cc86a;
+
+    --shadow-card: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-raised: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 4px 12px rgba(0,0,0,0.55);
+    --shadow-dropdown: 0 0 0 1px color-mix(in srgb, #ece7f5 11%, transparent), 0 16px 40px rgba(0,0,0,0.6);
+  }
 }

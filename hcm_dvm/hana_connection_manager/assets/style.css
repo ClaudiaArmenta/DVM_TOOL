@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   DVM Tool — "Organic" design system (warm, rounded, Caprasimo + Figtree)
+   DVM Tool — "Organic" design system (warm, rounded, Fraunces + Figtree)
    Tokens keep their --dvm-* names so every component re-skins with no layout
    changes; values come from the Organic theme (see design_system/styles.css).
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -1573,3 +1573,40 @@ textarea.dvm-input,
     --shadow-dropdown: 0 0 0 1px color-mix(in srgb, #ece7f5 11%, transparent), 0 16px 40px rgba(0,0,0,0.6);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   i18n additions — language switch + how-to / disclaimer on the landing
+   ═══════════════════════════════════════════════════════════════════════════ */
+.dvm-lang-switch {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; margin-bottom: 10px;
+}
+.dvm-lang-label {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--dvm-text-secondary); font-weight: 600;
+}
+.dvm-lang-pills .dvm-tab-pill { min-width: 40px; justify-content: center; }
+
+.dvm-howto-card {
+  background: var(--dvm-surface); border: 1px solid var(--dvm-border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  padding: var(--sp-4) var(--sp-5); margin-bottom: 20px;
+}
+.dvm-howto-head { display: flex; align-items: center; gap: 8px; margin-bottom: var(--sp-3); }
+.dvm-howto-title {
+  font-family: var(--dvm-font-heading); font-weight: 600; font-optical-sizing: auto;
+  font-size: 16px; margin: 0; color: var(--dvm-text);
+}
+.dvm-howto-steps {
+  margin: 0; padding-left: 22px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dvm-howto-steps li { font-size: 13px; color: var(--dvm-text); line-height: 1.5; }
+.dvm-howto-steps li::marker { color: var(--dvm-primary); font-weight: 700; }
+.dvm-howto-disclaimer {
+  display: flex; align-items: flex-start; gap: 8px; margin-top: var(--sp-3);
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--dvm-accent-2-bg); color: var(--dvm-accent-2-fg);
+  font-size: 12.5px; line-height: 1.5;
+}
+.dvm-howto-disclaimer .bi { margin-top: 2px; flex: none; font-size: 15px; }

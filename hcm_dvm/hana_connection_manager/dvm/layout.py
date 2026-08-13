@@ -87,9 +87,11 @@ def _build_header(version_options: List[str]) -> html.Div:
                     html.Div(
                         [
                             html.Button("Analyses", id="nav-tab-analyses",
-                                        className="dvm-nav-tab active", n_clicks=0),
+                                        className="dvm-nav-tab active", n_clicks=0,
+                                        **{"data-i18n": "nav.analyses"}),
                             html.Button("Offline", id="nav-tab-offline",
-                                        className="dvm-nav-tab", n_clicks=0),
+                                        className="dvm-nav-tab", n_clicks=0,
+                                        **{"data-i18n": "nav.offline"}),
                         ],
                         className="dvm-nav-tabs",
                     ),
@@ -124,7 +126,9 @@ def _build_header(version_options: List[str]) -> html.Div:
                         id="header-conn-badge",
                         className="dvm-connection-badge disconnected",
                     ),
-                    html.Button([html.I(className="bi bi-plug"), " Connect"],
+                    html.Button([html.I(className="bi bi-plug"),
+                                 html.Span("Connect", style={"marginLeft": "6px"},
+                                           **{"data-i18n": "btn.connect"})],
                                 id="btn-connect", className="btn btn-primary btn-sm", n_clicks=0),
                     html.Button([html.I(className="bi bi-x-lg")],
                                 id="btn-disconnect", className="dvm-btn-icon", n_clicks=0,
@@ -234,7 +238,8 @@ def _build_sidebar(analyses) -> html.Div:
         html.Button(
             [
                 html.I(className="bi bi-grid-1x2", style={"fontSize": "16px"}),
-                html.Span("Overview", className="dvm-sidebar-label"),
+                html.Span("Overview", className="dvm-sidebar-label",
+                          **{"data-i18n": "sidebar.overview"}),
             ],
             id="sidebar-item-overview",
             className="dvm-sidebar-item active",
@@ -254,7 +259,8 @@ def _build_sidebar(analyses) -> html.Div:
                     html.I(className=f"bi {icon}", style={"fontSize": "16px"}),
                     html.Div(
                         [
-                            html.Span(f"{short}: {title}", className="dvm-sidebar-label"),
+                            html.Span(f"{short}: {title}", className="dvm-sidebar-label",
+                                      **{"data-i18n": f"analysis.{spec['id']}.short"}),
                         ],
                         className="dvm-sidebar-text",
                     ),
@@ -315,9 +321,11 @@ def _build_overview_section(analyses) -> html.Div:
                             html.Div(
                                 [
                                     html.Div(f"{short}: {spec['title'].split(': ', 1)[-1]}",
-                                             className="dvm-analysis-card-title"),
+                                             className="dvm-analysis-card-title",
+                                             **{"data-i18n": f"analysis.{spec['id']}.short"}),
                                     html.Div(spec.get("description", ""),
-                                             className="dvm-analysis-card-desc"),
+                                             className="dvm-analysis-card-desc",
+                                             **{"data-i18n": f"analysis.{spec['id']}.desc"}),
                                 ],
                             ),
                         ],
@@ -349,16 +357,38 @@ def _build_overview_section(analyses) -> html.Div:
     return html.Div(
         html.Div(
             [
+                # Language selector (landing) — EN default / ES / PT
+                html.Div(
+                    [
+                        html.Span("Language", className="dvm-lang-label",
+                                  **{"data-i18n": "lang.label"}),
+                        html.Div(
+                            [
+                                html.Button("EN", className="dvm-tab-pill active",
+                                            n_clicks=0, **{"data-lang": "en"}),
+                                html.Button("ES", className="dvm-tab-pill",
+                                            n_clicks=0, **{"data-lang": "es"}),
+                                html.Button("PT", className="dvm-tab-pill",
+                                            n_clicks=0, **{"data-lang": "pt"}),
+                            ],
+                            className="dvm-tab-pills dvm-lang-pills",
+                        ),
+                    ],
+                    className="dvm-lang-switch",
+                ),
+
                 # Title area
                 html.Div([
                     html.I(className="bi bi-bar-chart-line",
                            style={"fontSize": "28px", "color": "var(--dvm-primary)"}),
                     html.Div([
-                        html.H2("DVM Analyses", className="dvm-page-title"),
+                        html.H2("DVM Analyses", className="dvm-page-title",
+                                **{"data-i18n": "overview.title"}),
                         html.P("Run analyses individually or as a batch. "
                                "Queries execute serially via a single DBACOCKPIT session.",
                                style={"color": "var(--dvm-text-secondary)",
-                                      "fontSize": "14px", "margin": "6px 0 0"}),
+                                      "fontSize": "14px", "margin": "6px 0 0"},
+                               **{"data-i18n": "overview.subtitle"}),
                     ]),
                 ], style={"display": "flex", "gap": "14px", "alignItems": "flex-start",
                           "marginBottom": "16px"}),
@@ -379,35 +409,82 @@ def _build_overview_section(analyses) -> html.Div:
                     html.Div([
                         html.Div([
                             html.Strong("A1", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Top tables by disk and memory size"),
+                            html.Span("Top tables by disk and memory size", **{"data-i18n": "info.a1"}),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
                         html.Div([
                             html.Strong("A2", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Memory & disk resource trend (~1 year, monthly)"),
+                            html.Span("Memory & disk resource trend (~1 year, monthly)", **{"data-i18n": "info.a2"}),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
                         html.Div([
                             html.Strong("A3", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Memory distribution by subarea (pie chart)"),
+                            html.Span("Memory distribution by subarea (pie chart)", **{"data-i18n": "info.a3"}),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
                         html.Div([
                             html.Strong("A4", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Top growing tables over last 30 days"),
+                            html.Span("Top growing tables over last 30 days", **{"data-i18n": "info.a4"}),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
                         html.Div([
                             html.Strong("A5", style={"color": "var(--dvm-primary)", "marginRight": "4px"}),
-                            html.Span("Partitioned column-store tables"),
+                            html.Span("Partitioned column-store tables", **{"data-i18n": "info.a5"}),
                         ], style={"fontSize": "12px", "marginBottom": "3px"}),
                         # A6 (NSE) temporarily hidden — analysis is a work in progress.
                     ], style={"paddingLeft": "8px", "borderLeft": "3px solid var(--dvm-primary)",
                               "marginBottom": "4px"}),
                 ], className="dvm-info-card", style={"marginBottom": "20px", "padding": "14px 16px"}),
 
+                # How-to (step-by-step) + slow-run disclaimer
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.I(className="bi bi-signpost-split",
+                                        style={"fontSize": "18px",
+                                               "color": "var(--dvm-primary)"}),
+                                html.H3("How to use this tool",
+                                        className="dvm-howto-title",
+                                        **{"data-i18n": "howto.title"}),
+                            ],
+                            className="dvm-howto-head",
+                        ),
+                        html.Ol(
+                            [
+                                html.Li("Pick the HANA revision (top-right) so each "
+                                        "analysis uses the matching SQL.",
+                                        **{"data-i18n": "howto.step1"}),
+                                html.Li("Connect to HANA via SAP GUI (DBACOCKPIT) with "
+                                        "the Connect button.",
+                                        **{"data-i18n": "howto.step2"}),
+                                html.Li("Select the analyses you want and press Run All "
+                                        "or Run Selected.",
+                                        **{"data-i18n": "howto.step3"}),
+                                html.Li("Review each result, then export or copy the "
+                                        "tables you need.",
+                                        **{"data-i18n": "howto.step4"}),
+                            ],
+                            className="dvm-howto-steps",
+                        ),
+                        html.Div(
+                            [
+                                html.I(className="bi bi-hourglass-split"),
+                                html.Span("Some analyses run heavy SQL and can take a "
+                                          "while. If a query seems slow, just give it "
+                                          "time — don't refresh. Results appear as each "
+                                          "analysis finishes.",
+                                          **{"data-i18n": "howto.disclaimer"}),
+                            ],
+                            className="dvm-howto-disclaimer",
+                        ),
+                    ],
+                    className="dvm-howto-card",
+                ),
+
                 # Still-running message (hidden by default, shown during execution)
                 html.Div(
                     [html.I(className="bi bi-hourglass-split me-2",
                             style={"color": "var(--dvm-primary)"}),
                      html.Span("Analyses are still running. Please wait for completion.",
-                               style={"fontSize": "13px"})],
+                               style={"fontSize": "13px"},
+                               **{"data-i18n": "overview.stillRunning"})],
                     id="overview-still-running",
                     className="dvm-warning-card",
                     style={"display": "none", "marginBottom": "16px"},
@@ -420,7 +497,8 @@ def _build_overview_section(analyses) -> html.Div:
                             html.Label("Select analyses to run or export:",
                                        style={"fontSize": "12px", "fontWeight": "600",
                                               "color": "var(--dvm-text-secondary)",
-                                              "marginBottom": "6px", "display": "block"}),
+                                              "marginBottom": "6px", "display": "block"},
+                                       **{"data-i18n": "overview.selectLabel"}),
                             dcc.Checklist(
                                 id="checklist-analyses",
                                 options=checklist_options,
@@ -438,21 +516,21 @@ def _build_overview_section(analyses) -> html.Div:
                 html.Div(
                     [
                         html.Button([html.I(className="bi bi-play-fill me-2"),
-                                     "Run All"],
+                                     html.Span("Run All", **{"data-i18n": "btn.runAll"})],
                                     id="btn-run-all-analyses",
                                     className="btn btn-primary", n_clicks=0),
                         html.Button([html.I(className="bi bi-play me-2"),
-                                     "Run Selected"],
+                                     html.Span("Run Selected", **{"data-i18n": "btn.runSelected"})],
                                     id="btn-run-selected",
                                     className="btn btn-outline-primary", n_clicks=0),
                         html.Div(style={"flex": "1"}),
                         html.Button([html.I(className="bi bi-file-earmark-excel me-2"),
-                                     "Export All"],
+                                     html.Span("Export All", **{"data-i18n": "btn.exportAll"})],
                                     id="btn-export-excel",
                                     className="btn btn-outline-primary btn-sm",
                                     n_clicks=0, style={"display": "none"}),
                         html.Button([html.I(className="bi bi-file-earmark-excel me-2"),
-                                     "Export Selected"],
+                                     html.Span("Export Selected", **{"data-i18n": "btn.exportSelected"})],
                                     id="btn-export-selected",
                                     className="btn btn-outline-secondary btn-sm",
                                     n_clicks=0, style={"display": "none"}),
@@ -517,10 +595,12 @@ def _build_analysis_section(spec) -> html.Div:
                                    style={"fontSize": "22px", "color": "var(--dvm-primary)"}),
                             html.Div([
                                 html.H2(title, className="dvm-page-title",
-                                        style={"margin": "0"}),
+                                        style={"margin": "0"},
+                                        **{"data-i18n": f"analysis.{aid}.short"}),
                                 html.P(spec.get("description", ""),
                                        style={"color": "var(--dvm-text-secondary)",
-                                              "fontSize": "13px", "margin": "4px 0 0"}),
+                                              "fontSize": "13px", "margin": "4px 0 0"},
+                                       **{"data-i18n": f"analysis.{aid}.desc"}),
                             ]),
                         ], style={"display": "flex", "gap": "12px",
                                   "alignItems": "flex-start", "flex": "1"}),

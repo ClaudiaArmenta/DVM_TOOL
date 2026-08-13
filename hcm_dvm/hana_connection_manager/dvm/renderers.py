@@ -281,72 +281,94 @@ def _build_a1_overview(dfs: List[pd.DataFrame]) -> html.Div:
     )
 
 
-def _build_situation_box(chart_df, ts_col, used_col, alloc_col, disk_col) -> html.Div:
-    """Build a 'Situation' summary box for A2 with key metrics."""
-    items = []
+def _to_num(series):
+    """Coerce a column to numeric, tolerating US ('1,234.56') and European
+    ('1.234,56') thousands/decimal formats plus unit suffixes like 'GB'."""
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce")
+    s = series.astype(str).str.strip().str.replace(r"[^\d.,\-]", "", regex=True)
 
-    if used_col and used_col in chart_df.columns:
-        vals = pd.to_numeric(chart_df[used_col], errors="coerce").dropna()
-        if len(vals) > 0:
-            current = vals.iloc[-1]
-            peak = vals.max()
-            items.append(("Memory Used (current)", f"{current:.1f} GB"))
-            items.append(("Memory Used (peak)", f"{peak:.1f} GB"))
-            if len(vals) > 1:
-                growth = vals.iloc[-1] - vals.iloc[0]
-                items.append(("Memory growth (period)", f"{growth:+.1f} GB"))
+    def conv(v):
+        if not v or v in ("-", ".", ","):
+            return float("nan")
+        last_dot, last_comma = v.rfind("."), v.rfind(",")
+        if last_comma > last_dot:            # comma is the decimal sep (EU)
+            v = v.replace(".", "").replace(",", ".")
+        else:                                 # dot is decimal (US) — drop comma thousands
+            v = v.replace(",", "")
+        try:
+            return float(v)
+        except ValueError:
+            return float("nan")
 
-    if alloc_col and alloc_col in chart_df.columns:
-        vals = pd.to_numeric(chart_df[alloc_col], errors="coerce").dropna()
-        if len(vals) > 0:
-            current_alloc = vals.iloc[-1]
-            items.append(("Allocation Limit", f"{current_alloc:.1f} GB"))
-            if used_col and used_col in chart_df.columns:
-                used_vals = pd.to_numeric(chart_df[used_col], errors="coerce").dropna()
-                if len(used_vals) > 0:
-                    utilization = (used_vals.iloc[-1] / current_alloc * 100) if current_alloc > 0 else 0
-                    items.append(("Memory utilization", f"{utilization:.1f}%"))
+    return s.map(conv)
 
-    if disk_col and disk_col in chart_df.columns:
-        vals = pd.to_numeric(chart_df[disk_col], errors="coerce").dropna()
-        if len(vals) > 0:
-            current_disk = vals.iloc[-1]
-            items.append(("Disk Used Data (current)", f"{current_disk:.1f} GB"))
-            if len(vals) > 1:
-                disk_growth = vals.iloc[-1] - vals.iloc[0]
-                items.append(("Disk growth (period)", f"{disk_growth:+.1f} GB"))
 
-    if ts_col and ts_col in chart_df.columns:
-        dates = pd.to_datetime(chart_df[ts_col], errors="coerce").dropna()
-        if len(dates) > 1:
-            span_days = (dates.iloc[-1] - dates.iloc[0]).days
-            items.append(("Time span", f"{span_days} days"))
+def _build_situation_box(chart_df, ts_col, disk_size_col, total_mem_col,
+                         cs_col, rs_col) -> html.Div:
+    """'Situation as of <date>' snapshot: disk size, total memory, and its
+    column-/row-store split — whichever of those columns are present."""
+    def latest(col):
+        if not col or col not in chart_df.columns:
+            return None
+        vals = _to_num(chart_df[col]).dropna()
+        return float(vals.iloc[-1]) if len(vals) else None
 
-    if not items:
+    disk = latest(disk_size_col)
+    total_mem = latest(total_mem_col)
+    cs = latest(cs_col)
+    rs = latest(rs_col)
+
+    if disk is None and total_mem is None and cs is None and rs is None:
         return html.Div()
 
-    rows = [
-        html.Tr([
-            html.Td(label, style={"padding": "4px 12px 4px 0", "fontSize": "12px",
-                                   "color": "var(--dvm-text-secondary)", "whiteSpace": "nowrap"}),
-            html.Td(val, style={"padding": "4px 0", "fontSize": "12px",
-                                "fontWeight": "600", "color": "var(--dvm-text)"}),
-        ])
-        for label, val in items
-    ]
+    # Situation date = latest snapshot in the data, else now.
+    when = None
+    if ts_col and ts_col in chart_df.columns:
+        dts = pd.to_datetime(chart_df[ts_col], errors="coerce").dropna()
+        if len(dts):
+            when = dts.max()
+    if when is None:
+        when = pd.Timestamp.now()
+    date_str = f"{when:%B} {when.day}, {when.year}"
+
+    def line(label, val, indent=False):
+        return html.Div(
+            [
+                html.Span(label, style={"color": "var(--dvm-text-secondary)",
+                                        "marginRight": "8px"}),
+                html.Span(f"{val:,.2f} GB", className="dvm-num",
+                          style={"fontWeight": "600",
+                                 "fontVariantNumeric": "tabular-nums"}),
+            ],
+            style={"fontSize": "13px", "padding": "3px 0",
+                   "paddingLeft": ("22px" if indent else "0")},
+        )
+
+    rows = []
+    if disk is not None:
+        rows.append(line("Disk Size:", disk))
+    if total_mem is not None:
+        rows.append(line("Total Memory Size:", total_mem))
+    if cs is not None:
+        rows.append(line("Column Store Size:", cs, indent=True))
+    if rs is not None:
+        rows.append(line("Row Store Size:", rs, indent=True))
 
     return html.Div(
         [
             html.Div(
-                [html.I(className="bi bi-info-circle me-2",
+                [html.I(className="bi bi-clipboard-pulse me-2",
                         style={"color": "var(--dvm-primary)"}),
-                 html.Span("Situation Summary", style={"fontWeight": "600", "fontSize": "13px"})],
+                 html.Span(f"Situation as of {date_str}",
+                           style={"fontWeight": "600", "fontSize": "13px"})],
                 style={"marginBottom": "8px"},
             ),
-            html.Table(html.Tbody(rows), style={"width": "100%"}),
+            html.Div(rows),
         ],
         className="dvm-info-card",
-        style={"marginBottom": "16px", "padding": "12px 16px"},
+        style={"marginBottom": "16px", "padding": "12px 16px",
+               "flexDirection": "column", "alignItems": "stretch"},
     )
 
 
@@ -388,101 +410,101 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
 
         chart_df = df.copy()
         chart_df.columns = [c.upper().strip() for c in chart_df.columns]
+        cols = list(chart_df.columns)
 
-        # Identify timestamp column
-        ts_col = None
-        for col in chart_df.columns:
-            if "SNAPSHOT" in col or "TIMESTAMP" in col or col == "TIME":
-                ts_col = col
-                break
-        if not ts_col:
-            for col in chart_df.columns:
-                if "TIME" in col:
-                    ts_col = col
-                    break
+        def find(pred):
+            return next((c for c in cols if pred(c)), None)
 
-        if ts_col:
-            chart_df[ts_col] = pd.to_datetime(chart_df[ts_col], errors="coerce")
-            chart_df = chart_df.dropna(subset=[ts_col]).sort_values(ts_col)
+        # ── Month key: prefer explicit YEAR + MONTH, else a date/timestamp ──
+        year_col = find(lambda c: c in ("YEAR", "YR"))
+        month_col = find(lambda c: c in ("MONTH", "MON", "MTH", "MONTH_NO"))
+        day_col = find(lambda c: c in ("DAY", "DAY_NO"))
+        ts_col = (find(lambda c: "SNAPSHOT" in c or "TIMESTAMP" in c)
+                  or find(lambda c: c in ("TIME", "DATE", "DATETIME", "DATE_TIME"))
+                  or find(lambda c: "DATE" in c or "TIME" in c))
 
-        # Identify value columns
-        alloc_col = None
-        used_col = None
-        disk_col = None
-        for col in chart_df.columns:
-            if "ALLOC_LIM" in col and "GB" in col:
-                alloc_col = col
-            elif "HANA_USED" in col and "GB" in col:
-                used_col = col
-            elif ("MEMORY" in col or "MEM" in col) and "USED" in col and "GB" in col and not used_col:
-                # e.g. a literal "Memory Used (GB)" column (uploaded/offline data)
-                used_col = col
-            elif "HANA_ALLOC" in col and "GB" in col and not alloc_col:
-                alloc_col = col
-            elif "DISK" in col and "USED" in col and "GB" in col:
-                disk_col = col
-            elif col == "DISK_USED_GB" and not disk_col:
-                disk_col = col
-            elif "DISK_SIZE" in col and "GB" in col and not disk_col:
-                disk_col = col
-            elif "DATA_DISK" in col and "GB" in col and not disk_col:
-                disk_col = col
+        if year_col and month_col:
+            yy = pd.to_numeric(chart_df[year_col], errors="coerce")
+            mm = pd.to_numeric(chart_df[month_col], errors="coerce")
+            dd = (pd.to_numeric(chart_df[day_col], errors="coerce")
+                  if day_col else pd.Series(1, index=chart_df.index))
+            chart_df["_TS"] = pd.to_datetime(
+                dict(year=yy, month=mm, day=dd), errors="coerce")
+        elif ts_col:
+            chart_df["_TS"] = pd.to_datetime(chart_df[ts_col], errors="coerce", dayfirst=True)
+        else:
+            chart_df["_TS"] = pd.NaT
 
-        # Build Situation summary box
-        situation = _build_situation_box(chart_df, ts_col, used_col, alloc_col, disk_col)
-        children.append(situation)
+        has_time = chart_df["_TS"].notna().any()
+        if has_time:
+            chart_df = chart_df.dropna(subset=["_TS"]).sort_values("_TS")
 
-        if not ts_col or (not alloc_col and not used_col and not disk_col):
+        # ── Value columns for the monthly trend chart ──
+        used_col = (find(lambda c: "HANA_USED" in c and "GB" in c)
+                    or find(lambda c: ("MEMORY" in c or "MEM" in c)
+                            and "USED" in c and "GB" in c))
+        disk_used_col = (find(lambda c: "DISK" in c and "USED" in c and "GB" in c)
+                         or find(lambda c: c == "DISK_USED_GB")
+                         or find(lambda c: "DATA_DISK" in c and "GB" in c))
+        alloc_col = (find(lambda c: "ALLOC_LIM" in c and "GB" in c)
+                     or find(lambda c: "HANA_ALLOC" in c and "GB" in c))
+
+        # ── Current-snapshot columns for the Situation box ──
+        disk_size_col = (find(lambda c: "DISK" in c and "SIZE" in c and "GB" in c)
+                         or find(lambda c: "DISK" in c and "TOTAL" in c and "GB" in c)
+                         or disk_used_col)
+        total_mem_col = (find(lambda c: "TOTAL" in c and ("MEMORY" in c or "MEM" in c) and "GB" in c)
+                         or find(lambda c: ("MEMORY" in c or "MEM" in c) and "SIZE" in c and "GB" in c)
+                         or used_col)
+        cs_col = (find(lambda c: "COLUMN" in c and "STORE" in c)
+                  or find(lambda c: c.startswith("CS_") and "GB" in c)
+                  or find(lambda c: "COLUMN_STORE" in c))
+        rs_col = (find(lambda c: "ROW" in c and "STORE" in c)
+                  or find(lambda c: c.startswith("RS_") and "GB" in c)
+                  or find(lambda c: "ROW_STORE" in c))
+
+        # Situation summary box (current snapshot)
+        children.append(_build_situation_box(
+            chart_df, "_TS" if has_time else None,
+            disk_size_col, total_mem_col, cs_col, rs_col))
+
+        if not has_time or (not used_col and not disk_used_col and not alloc_col):
             children.append(html.Div(
-                "Chart unavailable: expected SNAPSHOT_TIME + ALLOC_LIM_GB / HANA_USED_GB.",
+                "Trend chart unavailable: need a date (or Year + Month) column and "
+                "at least one of Memory Used (GB) / Disk Used Data (GB).",
                 className="dvm-warning-card",
             ))
         else:
-            # Monthly aggregation for cleaner chart
-            monthly_df = chart_df.copy()
-            monthly_df["_MONTH"] = monthly_df[ts_col].dt.to_period("M")
+            # Group by month and average within each month
+            monthly = chart_df.copy()
+            monthly["_MONTH"] = monthly["_TS"].dt.to_period("M")
 
             agg_cols = {}
-            if alloc_col:
-                monthly_df[alloc_col] = pd.to_numeric(monthly_df[alloc_col], errors="coerce")
-                agg_cols[alloc_col] = "mean"
-            if used_col:
-                monthly_df[used_col] = pd.to_numeric(monthly_df[used_col], errors="coerce")
-                agg_cols[used_col] = "mean"
-            if disk_col:
-                monthly_df[disk_col] = pd.to_numeric(monthly_df[disk_col], errors="coerce")
-                agg_cols[disk_col] = "mean"
+            for c in (used_col, disk_used_col, alloc_col):
+                if c:
+                    monthly[c] = _to_num(monthly[c])
+                    agg_cols[c] = "mean"
 
-            if agg_cols:
-                monthly_agg = monthly_df.groupby("_MONTH", as_index=False).agg(agg_cols)
-                monthly_agg["_DATE"] = monthly_agg["_MONTH"].apply(
-                    lambda p: p.to_timestamp() if hasattr(p, "to_timestamp") else p)
-                x_vals = monthly_agg["_DATE"]
-            else:
-                monthly_agg = monthly_df
-                x_vals = monthly_df[ts_col]
+            monthly_agg = monthly.groupby("_MONTH", as_index=False).agg(agg_cols)
+            monthly_agg["_DATE"] = monthly_agg["_MONTH"].apply(lambda p: p.to_timestamp())
+            x_vals = monthly_agg["_DATE"]
 
             fig = go.Figure()
-
-            if used_col and used_col in monthly_agg.columns:
+            if used_col:
                 fig.add_trace(go.Scatter(
                     x=x_vals, y=monthly_agg[used_col],
                     mode="lines+markers", name="Memory Used (GB)",
-                    fill="tozeroy",
-                    fillcolor="rgba(0,112,242,0.08)",
-                    line=dict(color=_CHART_COLORS[0], width=2),
+                    line=dict(color=_CHART_COLORS[0], width=2.5),
                     marker=dict(size=5),
                 ))
-
-            if disk_col and disk_col in monthly_agg.columns:
+            if disk_used_col:
                 fig.add_trace(go.Scatter(
-                    x=x_vals, y=monthly_agg[disk_col],
+                    x=x_vals, y=monthly_agg[disk_used_col],
                     mode="lines+markers", name="Disk Used Data (GB)",
-                    line=dict(color=_CHART_COLORS[2], width=2),
+                    line=dict(color=_CHART_COLORS[2], width=2.5),
                     marker=dict(size=5),
                 ))
-
-            if alloc_col and alloc_col in monthly_agg.columns:
+            if alloc_col:
                 fig.add_trace(go.Scatter(
                     x=x_vals, y=monthly_agg[alloc_col],
                     mode="lines", name="Allocation Limit (GB)",
@@ -492,6 +514,7 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             fig.update_layout(height=380, yaxis_title="GB", **_CHART_LAYOUT)
             fig.update_layout(
                 title=dict(text="Monthly Resource Trend", font=dict(size=14)),
+                xaxis=dict(tickformat="%b %Y"),
             )
             children.append(_chart_card(fig))
 
@@ -501,7 +524,7 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
     children.append(collapsible_sql(res.get("sql", "")))
-    children.append(results_table(df, max_rows=200))
+    children.append(results_table(df, max_rows=200, name="Memory_History"))
     return html.Div(children)
 
 

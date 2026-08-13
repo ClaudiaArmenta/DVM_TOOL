@@ -357,7 +357,7 @@ def _build_overview_section(analyses) -> html.Div:
     return html.Div(
         html.Div(
             [
-                # Language selector (landing) — EN default / ES / PT
+                # Landing selectors — language (EN/ES/PT) + number format (US/EU)
                 html.Div(
                     [
                         html.Span("Language", className="dvm-lang-label",
@@ -372,6 +372,18 @@ def _build_overview_section(analyses) -> html.Div:
                                             n_clicks=0, **{"data-lang": "pt"}),
                             ],
                             className="dvm-tab-pills dvm-lang-pills",
+                        ),
+                        html.Span("Numbers", className="dvm-lang-label",
+                                  style={"marginLeft": "6px"},
+                                  **{"data-i18n": "numfmt.label"}),
+                        html.Div(
+                            [
+                                html.Button("1,000.00", className="dvm-tab-pill active",
+                                            n_clicks=0, **{"data-numfmt": "us"}),
+                                html.Button("1.000,00", className="dvm-tab-pill",
+                                            n_clicks=0, **{"data-numfmt": "eu"}),
+                            ],
+                            className="dvm-tab-pills dvm-numfmt-pills",
                         ),
                     ],
                     className="dvm-lang-switch",

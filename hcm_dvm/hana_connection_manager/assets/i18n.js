@@ -22,6 +22,7 @@
       "btn.connect": "Connect",
 
       "lang.label": "Language",
+      "numfmt.label": "Numbers",
 
       "table.copy": "Copy",
       "table.csv": "CSV",
@@ -72,6 +73,7 @@
       "btn.connect": "Conectar",
 
       "lang.label": "Idioma",
+      "numfmt.label": "Números",
 
       "table.copy": "Copiar",
       "table.csv": "CSV",
@@ -122,6 +124,7 @@
       "btn.connect": "Conectar",
 
       "lang.label": "Idioma",
+      "numfmt.label": "Números",
 
       "table.copy": "Copiar",
       "table.csv": "CSV",

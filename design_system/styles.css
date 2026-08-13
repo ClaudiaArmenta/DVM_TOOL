@@ -1,0 +1,427 @@
+/* Organic — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
+
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-text: #1d2d3e;
+  --color-accent: #0070f2;
+  --color-accent-2: #b8541a;
+  --color-divider: color-mix(in srgb, #1d2d3e 16%, transparent);
+
+  /* Status + data. Status colors carry meaning; series colors are
+     categorical — assign 1→8 in order and never reuse one in a chart. */
+  --color-positive: #1a7f43;
+  --color-negative: #b3261e;
+  --color-warning: #a35c00;
+  --color-info: #0070f2;
+  --series-1: #0070f2;
+  --series-2: #b8541a;
+  --series-3: #2f7d6a;
+  --series-4: #7b5ea7;
+  --series-5: #a3123a;
+  --series-6: #5b738b;
+  --series-7: #b08a1e;
+  --series-8: #3f7a2e;
+  --grid-line: color-mix(in srgb, var(--color-text) 12%, transparent);
+
+  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
+     same step of any role matches the others in visual value. */
+  --color-neutral-100: #f7f8f9;
+  --color-neutral-200: #eef0f2;
+  --color-neutral-300: #dee3e8;
+  --color-neutral-400: #c2cad3;
+  --color-neutral-500: #a0aab5;
+  --color-neutral-600: #857c95;
+  --color-neutral-700: #5b6675;
+  --color-neutral-800: #3c4655;
+  --color-neutral-900: #22303f;
+
+  --color-accent-100: #eaf3ff;
+  --color-accent-200: #d2e5fe;
+  --color-accent-300: #a9cffc;
+  --color-accent-400: #6aabf7;
+  --color-accent-500: #0070f2;
+  --color-accent-600: #005dc9;
+  --color-accent-700: #0a49a0;
+  --color-accent-800: #0d3673;
+  --color-accent-900: #0c244b;
+
+  --color-accent-2-100: #fdf2e7;
+  --color-accent-2-200: #fbdfc6;
+  --color-accent-2-300: #f5c093;
+  --color-accent-2-400: #e79a54;
+  --color-accent-2-500: #cf7a28;
+  --color-accent-2-600: #ad5f10;
+  --color-accent-2-700: #8b4a0b;
+  --color-accent-2-800: #663708;
+  --color-accent-2-900: #402406;
+
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-heading-weight: 400;
+  --font-body: "Figtree", system-ui, sans-serif;
+
+  --space-1: 4.4px;
+  --space-2: 8.8px;
+  --space-3: 13.2px;
+  --space-4: 17.6px;
+  --space-6: 26.4px;
+  --space-8: 35.2px;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+
+  /* Elevation — derived from the ground: soft ink-tinted shadows on a
+     light theme, a hairline edge + ambient darkness on a dark one. */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #22303f 16%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #22303f 18%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #22303f 24%, transparent);
+}
+
+/* ── Dark mode ────────────────────────────────────────────────────────────
+   Same roles, second palette. Force with data-theme="dark" (or .theme-dark)
+   on <html>; without a data-theme the OS preference decides. */
+:root[data-theme="dark"], .theme-dark {
+  color-scheme: dark;
+  --color-bg: #16121f;
+  --color-surface: #201a2c;
+  --color-text: #ece7f5;
+  --color-accent: #8b6cf0;
+  --color-accent-2: #e0813a;
+  --color-divider: color-mix(in srgb, #ece7f5 20%, transparent);
+
+  --color-positive: #4ec38a;
+  --color-negative: #f2707a;
+  --color-warning: #e0a33a;
+  --color-info: #8b6cf0;
+  --series-1: #8b6cf0;
+  --series-2: #e0813a;
+  --series-3: #4bbfa0;
+  --series-4: #6aabf7;
+  --series-5: #f2637f;
+  --series-6: #a79fb5;
+  --series-7: #e2c04a;
+  --series-8: #7cc86a;
+  --grid-line: color-mix(in srgb, var(--color-text) 16%, transparent);
+
+  /* Ramps reverse on dark: 100 is still "the subtlest fill", 900 still
+     "the strongest value" — so every component class keeps working. */
+  --color-neutral-100: #1f1929;
+  --color-neutral-200: #282133;
+  --color-neutral-300: #332b40;
+  --color-neutral-400: #453b54;
+  --color-neutral-500: #635a74;
+  --color-neutral-600: #857c95;
+  --color-neutral-700: #a79fb5;
+  --color-neutral-800: #c8c2d3;
+  --color-neutral-900: #e8e4ef;
+
+  --color-accent-100: #241a3f;
+  --color-accent-200: #2f2153;
+  --color-accent-300: #402c76;
+  --color-accent-400: #573ba6;
+  --color-accent-500: #8b6cf0;
+  --color-accent-600: #a488f4;
+  --color-accent-700: #bda7f8;
+  --color-accent-800: #d6c7fb;
+  --color-accent-900: #ece3fd;
+
+  --color-accent-2-100: #2c1a0c;
+  --color-accent-2-200: #3d2410;
+  --color-accent-2-300: #573314;
+  --color-accent-2-400: #7a481b;
+  --color-accent-2-500: #cf7a33;
+  --color-accent-2-600: #e0934f;
+  --color-accent-2-700: #eeae79;
+  --color-accent-2-800: #f5c9a4;
+  --color-accent-2-900: #fae3ce;
+
+  --shadow-sm: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 4px 12px rgba(0,0,0,0.55);
+  --shadow-lg: 0 0 0 1px color-mix(in srgb, #ece7f5 11%, transparent), 0 16px 40px rgba(0,0,0,0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+  color-scheme: dark;
+  --color-bg: #16121f;
+  --color-surface: #201a2c;
+  --color-text: #ece7f5;
+  --color-accent: #8b6cf0;
+  --color-accent-2: #e0813a;
+  --color-divider: color-mix(in srgb, #ece7f5 20%, transparent);
+
+  --color-positive: #4ec38a;
+  --color-negative: #f2707a;
+  --color-warning: #e0a33a;
+  --color-info: #8b6cf0;
+  --series-1: #8b6cf0;
+  --series-2: #e0813a;
+  --series-3: #4bbfa0;
+  --series-4: #6aabf7;
+  --series-5: #f2637f;
+  --series-6: #a79fb5;
+  --series-7: #e2c04a;
+  --series-8: #7cc86a;
+  --grid-line: color-mix(in srgb, var(--color-text) 16%, transparent);
+
+  /* Ramps reverse on dark: 100 is still "the subtlest fill", 900 still
+     "the strongest value" — so every component class keeps working. */
+  --color-neutral-100: #1f1929;
+  --color-neutral-200: #282133;
+  --color-neutral-300: #332b40;
+  --color-neutral-400: #453b54;
+  --color-neutral-500: #635a74;
+  --color-neutral-600: #857c95;
+  --color-neutral-700: #a79fb5;
+  --color-neutral-800: #c8c2d3;
+  --color-neutral-900: #e8e4ef;
+
+  --color-accent-100: #241a3f;
+  --color-accent-200: #2f2153;
+  --color-accent-300: #402c76;
+  --color-accent-400: #573ba6;
+  --color-accent-500: #8b6cf0;
+  --color-accent-600: #a488f4;
+  --color-accent-700: #bda7f8;
+  --color-accent-800: #d6c7fb;
+  --color-accent-900: #ece3fd;
+
+  --color-accent-2-100: #2c1a0c;
+  --color-accent-2-200: #3d2410;
+  --color-accent-2-300: #573314;
+  --color-accent-2-400: #7a481b;
+  --color-accent-2-500: #cf7a33;
+  --color-accent-2-600: #e0934f;
+  --color-accent-2-700: #eeae79;
+  --color-accent-2-800: #f5c9a4;
+  --color-accent-2-900: #fae3ce;
+
+  --shadow-sm: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md: 0 0 0 1px color-mix(in srgb, #ece7f5 9%, transparent), 0 4px 12px rgba(0,0,0,0.55);
+  --shadow-lg: 0 0 0 1px color-mix(in srgb, #ece7f5 11%, transparent), 0 16px 40px rgba(0,0,0,0.6);
+  }
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.washed{filter:saturate(0.6) contrast(0.85) brightness(1.1) opacity(0.94)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Components — built with the tokens above. Plain CSS
+   on plain HTML: no JavaScript, no build step. Each class is documented in
+   readme.md and demonstrated in foundations/ and components/.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 { font-size: 13px; }
+h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+figure { margin: 0; }
+figcaption {
+  font-size: 11px; margin-top: var(--space-1);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* — rules — */
+.hr {
+  height: 1px; border: 0; margin: var(--space-4) 0;
+  background: var(--color-divider);
+}
+
+/* — buttons — */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 14px; line-height: 1.2; color: var(--color-text); /* matches the .input's 14px —
+     the pair sits side by side in sign-up rows */
+  background: transparent; border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.btn svg { display: block; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.btn-primary:hover { background: var(--color-accent-600); }
+.btn-primary:active { background: var(--color-accent-700); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-icon { width: 36px; height: 36px; padding: 0; }
+.btn-block { width: 100%; margin-top: var(--space-2); }
+
+/* — forms — */
+.field > label {
+  display: block; font-size: 12px; margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.input {
+  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+textarea.input { min-height: 90px; resize: vertical; }
+.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.radio input, .seg-opt input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.radio .dot {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--color-divider);
+}
+.radio:hover .dot { border-color: var(--color-accent); }
+.radio input:checked + .dot {
+  border-color: var(--color-accent); background: var(--color-accent);
+  box-shadow: inset 0 0 0 4px var(--color-bg);
+}
+.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.seg-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
+.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* — cards — */
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.card-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 17px; line-height: 1.2;
+}
+.card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
+.card-meta {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* — tags — */
+.tag {
+  display: inline-flex; align-items: center; font-size: 11px;
+  letter-spacing: 0.02em; padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+
+/* — navigation — */
+.nav {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: none;
+}
+.nav-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.nav a { color: inherit; text-decoration: none; font-size: 14px; }
+.nav a:hover, .nav a[aria-current='page'] { color: var(--color-accent); }
+
+/* — tables — */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  padding: var(--space-2); border-bottom: 1px solid var(--color-divider);
+}
+.table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+
+/* — dialog — */
+.dialog-backdrop {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.dialog {
+  width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-lg);
+}
+.dialog-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+.dialog-body { font-size: 14px; opacity: 0.85; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* — rounded frame: everything softens, small controls go pill — */
+.card, .dialog { border-radius: calc(var(--radius-lg) * 1.15); }
+.btn, .tag, .seg, .input { border-radius: 999px; }
+.input { padding-inline: 14px; }
+
+
+/* — data display: dense tables, numeric cells, deltas — */
+.table-dense th, .table-dense td { padding: 5px var(--space-2); font-size: 13px; line-height: 1.35; }
+.table-dense th { font-size: 10px; }
+.table td.num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-zebra tbody tr:nth-child(even) { background: color-mix(in srgb, var(--color-text) 3.5%, transparent); }
+.table-sticky thead th { position: sticky; top: 0; z-index: 1; background: var(--color-bg); }
+.delta { font-variant-numeric: tabular-nums; font-size: 12px; }
+.delta-up { color: var(--color-positive); }
+.delta-down { color: var(--color-negative); }
+.tag-positive { background: color-mix(in srgb, var(--color-positive) 14%, transparent); color: var(--color-positive); }
+.tag-negative { background: color-mix(in srgb, var(--color-negative) 14%, transparent); color: var(--color-negative); }
+.tag-warning { background: color-mix(in srgb, var(--color-warning) 16%, transparent); color: var(--color-warning); }
+
+/* — charts: CSS-only bar and pie primitives, colored from the series tokens — */
+.chart { display: flex; align-items: flex-end; gap: var(--space-2); height: 160px; padding-top: var(--space-2); border-bottom: 1px solid var(--grid-line); }
+.chart-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; height: 100%; }
+.chart-col > .bar { border-radius: 4px 4px 0 0; background: var(--series-1); }
+.chart-label { font-size: 10px; text-align: center; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.chart-stack { display: flex; flex-direction: column-reverse; height: 100%; justify-content: flex-start; border-radius: 4px 4px 0 0; overflow: hidden; }
+.chart-stack > * { width: 100%; }
+.pie { width: 132px; height: 132px; border-radius: 50%; }
+.pie-donut { -webkit-mask: radial-gradient(circle, transparent 52%, #000 53%); mask: radial-gradient(circle, transparent 52%, #000 53%); }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: 12px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.metric { display: flex; flex-direction: column; gap: 2px; }
+.metric-value { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.metric-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 55%, transparent); }

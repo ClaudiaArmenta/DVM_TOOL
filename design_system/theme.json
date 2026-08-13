@@ -1,0 +1,44 @@
+{
+  "name": "Organic",
+  "palette": {
+    "hue": 215,
+    "band": "light",
+    "scheme": "duo",
+    "sat": 0.35,
+    "pin": {
+      "bg": "#f5f6f7",
+      "surface": "#ffffff",
+      "accent2": "#b8541a"
+    },
+    "bg": "#f5f6f7",
+    "surface": "#ffffff",
+    "text": "#1d2d3e",
+    "accent": "#0070f2",
+    "accent2": "#b8541a"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Caprasimo",
+      "class": "display",
+      "weights": [
+        400
+      ]
+    },
+    "body": {
+      "family": "Figtree",
+      "class": "humanist",
+      "weights": [
+        400,
+        600,
+        700
+      ]
+    }
+  },
+  "density": 1.1,
+  "radius": 16,
+  "layoutStyle": "left",
+  "frame": "rounded",
+  "imageTreatment": "washed",
+  "photo": "organic",
+  "iconSet": "lucide-bold"
+}

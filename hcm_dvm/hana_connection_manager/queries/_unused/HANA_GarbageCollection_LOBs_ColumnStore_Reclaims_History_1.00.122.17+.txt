@@ -1,0 +1,297 @@
+SELECT
+
+/* 
+
+[NAME]
+
+- HANA_GarbageCollection_LOBs_ColumnStore_Reclaims_History_1.00.122.17+
+
+[DESCRIPTION]
+
+- Column store LOB reclaim operations
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- H_CS_LOB_SPACE_RECLAIMS available with SAP HANA >= 1.00.122.17
+- Statistics server history HOST_CS_LOB_SPACE_RECLAIMS and related monitoring view M_CS_LOB_SPACE_RECLAIMS have a quite
+  different format, so the evaluation cannot be combined in one analysis command (bug 308767)
+
+[VALID FOR]
+
+- Revisions:              >= 1.00.122.17
+
+[SQL COMMAND VERSION]
+
+- 2023/06/17:  1.0 (initial version)
+- 2023/06/19:  1.1 (VOLUME_ID added)
+
+[INVOLVED TABLES]
+
+- HOST_CS_LOB_SPACE_RECLAIMS
+
+[INPUT PARAMETERS]
+
+- BEGIN_TIME
+
+  Begin time
+
+  '2018/12/05 14:05:00' --> Set begin time to 5th of December 2018, 14:05
+  'C'                   --> Set begin time to current time
+  'C-S900'              --> Set begin time to current time minus 900 seconds
+  'C-M15'               --> Set begin time to current time minus 15 minutes
+  'C-H5'                --> Set begin time to current time minus 5 hours
+  'C-D1'                --> Set begin time to current time minus 1 day
+  'C-W4'                --> Set begin time to current time minus 4 weeks
+  'E-S900'              --> Set begin time to end time minus 900 seconds
+  'E-M15'               --> Set begin time to end time minus 15 minutes
+  'E-H5'                --> Set begin time to end time minus 5 hours
+  'E-D1'                --> Set begin time to end time minus 1 day
+  'E-W4'                --> Set begin time to end time minus 4 weeks
+  'MIN'                 --> Set begin time to minimum (1000/01/01 00:00:00)
+
+- END_TIME
+
+  End time
+
+  '2018/12/08 14:05:00' --> Set end time to 8th of December 2018, 14:05
+  'C'                   --> Set end time to current time
+  'C-S900'              --> Set end time to current time minus 900 seconds
+  'C-M15'               --> Set end time to current time minus 15 minutes
+  'C-H5'                --> Set end time to current time minus 5 hours
+  'C-D1'                --> Set end time to current time minus 1 day
+  'C-W4'                --> Set end time to current time minus 4 weeks
+  'B+S900'              --> Set end time to begin time plus 900 seconds
+  'B+M15'               --> Set end time to begin time plus 15 minutes
+  'B+H5'                --> Set end time to begin time plus 5 hours
+  'B+D1'                --> Set end time to begin time plus 1 day
+  'B+W4'                --> Set end time to begin time plus 4 weeks
+  'MAX'                 --> Set end time to maximum (9999/12/31 23:59:59)
+
+- TIMEZONE
+
+  Used timezone (both for input and output parameters)
+
+  'SERVER'       --> Display times in SAP HANA server time
+  'UTC'          --> Display times in UTC time
+
+- VOLUME_ID
+
+  Disk volume ID
+
+  3               --> Volume 3
+  -1              --> No restriction related to volume 
+
+- ONLY_ERRORS
+
+  Possibility to restrict output to reclaim errors
+
+  'X'            --> Display only entries with reclaim errors
+  ' '            --> No restriction related to reclaim errors
+
+- MIN_LOBS
+
+  Minimum number of removed LOBs (file + packed)
+
+  100             --> Display reclaims with at least 100 removed LOBs
+  -1              --> No restriction related to removed LOBs
+
+- MIN_FILE_LOBS
+
+  Minimum number of removed file LOBs
+
+  100             --> Display reclaims with at least 100 removed file LOBs
+  -1              --> No restriction related to removed file LOBs
+
+- MIN_PACKED_LOBS
+
+  Minimum number of removed packed LOBs
+
+  100             --> Display reclaims with at least 100 removed packed LOBs
+  -1              --> No restriction related to removed packed LOBs
+
+- AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'TIME'          --> Aggregation by time
+  'HOST, PORT'    --> Aggregation by host and port
+  'NONE'          --> No aggregation
+
+- TIME_AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'HOUR'          --> Aggregation by hour
+  'YYYY/WW'       --> Aggregation by calendar week
+  'TS<seconds>'   --> Time slice aggregation based on <seconds> seconds
+  'NONE'          --> No aggregation
+  
+[OUTPUT PARAMETERS]
+
+- MIN_START_TIME: Minimum start time (history is based on summaries per time range)
+- MAX_START_TIME: Maximum start time
+- COUNT:          Number of reclaims
+- VOL:            Volume ID
+- AVG_DUR_S:      Average reclaim duration (s)
+- TOT_DUR_S:      Total reclaim duration (s)
+- FILE_LOBS:      Number of removed classic file LOBs
+- PACKED_LOBS:    Number of removed packed LOBs
+- ERROR_MESSAGE:  Error messages
+
+[EXAMPLE OUTPUT]
+
+---------------------------------------------------------------------------------------------------------
+|MIN_START_TIME     |MAX_START_TIME     |COUNT|AVG_DUR_S |TOT_DUR_S |FILE_LOBS|PACKED_LOBS|ERROR_MESSAGE|
+---------------------------------------------------------------------------------------------------------
+|2023/06/16 22:32:31|2023/06/17 00:59:59|    2|    196.41|    392.82|   175936|     396534|             |
+|2023/06/16 10:32:31|2023/06/16 10:32:31|    1|    257.52|    257.52|   188158|     219402|             |
+|2023/06/15 22:32:31|2023/06/16 00:59:59|    2|    198.70|    397.41|   222061|     556016|             |
+|2023/06/15 10:32:30|2023/06/15 10:32:30|    1|    216.82|    216.82|   185710|     217955|             |
+|2023/06/14 22:32:30|2023/06/15 00:59:59|    2|    323.45|    646.90|   239995|     537192|             |
+|2023/06/14 10:32:30|2023/06/14 10:32:30|    1|    232.11|    232.11|   197347|     284495|             |
+|2023/06/13 22:32:30|2023/06/14 00:59:59|    2|    196.24|    392.48|   260584|     304208|             |
+|2023/06/13 10:32:30|2023/06/13 10:32:30|    1|    274.69|    274.69|   156814|     209871|             |
+|2023/06/12 22:32:30|2023/06/13 01:00:00|    2|    212.28|    424.56|   241624|     615785|             |
+|2023/06/12 10:32:30|2023/06/12 10:32:30|    1|    243.83|    243.83|   140098|     217681|             |
+---------------------------------------------------------------------------------------------------------
+
+*/
+
+  MIN_START_TIME,
+  MAX_START_TIME,
+  LPAD(VOLUME_ID, 3) VOL,
+  LPAD(COUNT, 5) COUNT,
+  LPAD(TO_DECIMAL(MAP(COUNT, 0, 0, DURATION_S / COUNT), 10, 2), 10) AVG_DUR_S,
+  LPAD(TO_DECIMAL(DURATION_S, 10, 2), 10) TOT_DUR_S,
+  LPAD(FILE_LOBS, 9) FILE_LOBS,
+  LPAD(PACKED_LOBS, 11) PACKED_LOBS,
+  ERROR_MESSAGE
+FROM
+( SELECT
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MIN_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MIN_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MIN_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MIN_START_TIME END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END MIN_START_TIME,
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MAX_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MAX_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MAX_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MAX_START_TIME END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END MAX_START_TIME,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'ERROR')  != 0 THEN TO_VARCHAR(R.ALL_ERROR_MESSAGES) ELSE 'any'                                                  END ERROR_MESSAGE,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'VOLUME') != 0 THEN TO_VARCHAR(R.VOLUME_ID)          ELSE MAP(BI.VOLUME_ID, -1, 'any', TO_VARCHAR(BI.VOLUME_ID)) END VOLUME_ID,
+    SUM(R.COLLECTION_RUNS_COUNT) COUNT,
+    SUM(R.SUM_DURATION / 1000) DURATION_S,
+    SUM(R.SUM_REMOVED_FILE_LOBS_COUNT) FILE_LOBS,
+    SUM(R.SUM_REMOVED_PACKED_LOBS_COUNT) PACKED_LOBS,
+    SUM(R.ERROR_COUNT) ERRORS
+  FROM
+  ( SELECT
+      CASE
+        WHEN BEGIN_TIME =    'C'                             THEN CURRENT_TIMESTAMP
+        WHEN BEGIN_TIME LIKE 'C-S%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-S'))
+        WHEN BEGIN_TIME LIKE 'C-M%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-M') * 60)
+        WHEN BEGIN_TIME LIKE 'C-H%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-H') * 3600)
+        WHEN BEGIN_TIME LIKE 'C-D%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-D') * 86400)
+        WHEN BEGIN_TIME LIKE 'C-W%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-W') * 86400 * 7)
+        WHEN BEGIN_TIME LIKE 'E-S%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-S'))
+        WHEN BEGIN_TIME LIKE 'E-M%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-M') * 60)
+        WHEN BEGIN_TIME LIKE 'E-H%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-H') * 3600)
+        WHEN BEGIN_TIME LIKE 'E-D%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-D') * 86400)
+        WHEN BEGIN_TIME LIKE 'E-W%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-W') * 86400 * 7)
+        WHEN BEGIN_TIME =    'MIN'                           THEN TO_TIMESTAMP('1000/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS')
+        WHEN SUBSTR(BEGIN_TIME, 1, 1) NOT IN ('C', 'E', 'M') THEN TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS')
+      END BEGIN_TIME,
+      CASE
+        WHEN END_TIME =    'C'                             THEN CURRENT_TIMESTAMP
+        WHEN END_TIME LIKE 'C-S%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-S'))
+        WHEN END_TIME LIKE 'C-M%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-M') * 60)
+        WHEN END_TIME LIKE 'C-H%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-H') * 3600)
+        WHEN END_TIME LIKE 'C-D%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-D') * 86400)
+        WHEN END_TIME LIKE 'C-W%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-W') * 86400 * 7)
+        WHEN END_TIME LIKE 'B+S%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+S'))
+        WHEN END_TIME LIKE 'B+M%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+M') * 60)
+        WHEN END_TIME LIKE 'B+H%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+H') * 3600)
+        WHEN END_TIME LIKE 'B+D%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+D') * 86400)
+        WHEN END_TIME LIKE 'B+W%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+W') * 86400 * 7)
+        WHEN END_TIME =    'MAX'                           THEN TO_TIMESTAMP('9999/12/31 00:00:00', 'YYYY/MM/DD HH24:MI:SS')
+        WHEN SUBSTR(END_TIME, 1, 1) NOT IN ('C', 'B', 'M') THEN TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS')
+      END END_TIME,
+      TIMEZONE,
+      VOLUME_ID,
+      ONLY_ERRORS,
+      MIN_LOBS,
+      MIN_FILE_LOBS,
+      MIN_PACKED_LOBS,
+      AGGREGATE_BY,
+      MAP(TIME_AGGREGATE_BY,
+        'NONE',        'YYYY/MM/DD HH24:MI:SS',
+        'HOUR',        'YYYY/MM/DD HH24',
+        'DAY',         'YYYY/MM/DD (DY)',
+        'HOUR_OF_DAY', 'HH24',
+        TIME_AGGREGATE_BY ) TIME_AGGREGATE_BY
+    FROM
+    ( SELECT                 /* Modification section */
+        '1000/10/18 07:58:00' BEGIN_TIME,                  /* YYYY/MM/DD HH24:MI:SS timestamp, C, C-S<seconds>, C-M<minutes>, C-H<hours>, C-D<days>, C-W<weeks>, E-S<seconds>, E-M<minutes>, E-H<hours>, E-D<days>, E-W<weeks>, MIN */
+        '9999/10/18 08:05:00' END_TIME,                    /* YYYY/MM/DD HH24:MI:SS timestamp, C, C-S<seconds>, C-M<minutes>, C-H<hours>, C-D<days>, C-W<weeks>, B+S<seconds>, B+M<minutes>, B+H<hours>, B+D<days>, B+W<weeks>, MAX */
+        'SERVER' TIMEZONE,                              /* SERVER, UTC */
+        -1 VOLUME_ID,
+        ' ' ONLY_ERRORS,
+        -1 MIN_LOBS,
+        -1 MIN_FILE_LOBS,
+        -1 MIN_PACKED_LOBS,
+        'NONE' AGGREGATE_BY,         /* TIME, VOLUME, ERROR or comma separated combinations, NONE for no aggregation */
+        'NONE' TIME_AGGREGATE_BY     /* HOUR, DAY, HOUR_OF_DAY or database time pattern, TS<seconds> for time slice, NONE for no aggregation */       
+      FROM
+        DUMMY
+    )
+  ) BI,
+    _SYS_STATISTICS.HOST_CS_LOB_SPACE_RECLAIMS R
+  WHERE
+    CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MIN_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MIN_START_TIME END BETWEEN BI.BEGIN_TIME AND BI.END_TIME AND
+    ( BI.VOLUME_ID = -1 OR R.VOLUME_ID = BI.VOLUME_ID ) AND
+    ( BI.MIN_FILE_LOBS = -1 OR R.SUM_REMOVED_FILE_LOBS_COUNT >= BI.MIN_FILE_LOBS ) AND
+    ( BI.MIN_PACKED_LOBS = -1 OR R.SUM_REMOVED_PACKED_LOBS_COUNT >= BI.MIN_PACKED_LOBS ) AND
+    ( BI.MIN_LOBS = -1 OR R.SUM_REMOVED_FILE_LOBS_COUNT + R.SUM_REMOVED_PACKED_LOBS_COUNT >= BI.MIN_LOBS ) AND
+    ( BI.ONLY_ERRORS = ' ' OR TO_VARCHAR(R.ALL_ERROR_MESSAGES) != '' )
+  GROUP BY
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MIN_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MIN_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MIN_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MIN_START_TIME END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END,
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MAX_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MAX_START_TIME END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.MAX_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.MAX_START_TIME END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'ERROR')  != 0 THEN TO_VARCHAR(R.ALL_ERROR_MESSAGES) ELSE 'any'                                                  END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'VOLUME') != 0 THEN TO_VARCHAR(R.VOLUME_ID)          ELSE MAP(BI.VOLUME_ID, -1, 'any', TO_VARCHAR(BI.VOLUME_ID)) END
+)
+ORDER BY
+  MIN_START_TIME DESC,
+  MAX_START_TIME DESC

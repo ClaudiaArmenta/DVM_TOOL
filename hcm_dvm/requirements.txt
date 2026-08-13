@@ -1,0 +1,10 @@
+# DVM Tool (hana_connection_manager) - Dependencies
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
+pandas>=2.0.0
+plotly>=5.0.0
+openpyxl>=3.1.0
+# Optional: SAP HANA native driver
+# hdbcli>=2.17.0
+# Optional: SAP GUI scripting (Windows only)
+# pywin32>=306

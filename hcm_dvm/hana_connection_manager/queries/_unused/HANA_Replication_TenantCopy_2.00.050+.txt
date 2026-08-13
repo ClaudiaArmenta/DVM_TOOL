@@ -1,0 +1,168 @@
+SELECT
+
+/*
+
+[NAME]
+
+- HANA_Replication_TenantCopy_2.00.050+
+
+[DESCRIPTION]
+
+- Tenant copy information
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+[VALID FOR]
+
+- Revisions:              >= 2.00.050
+
+[SQL COMMAND VERSION]
+
+- 2026/06/18:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+- M_DATABASE_REPLICA_STATISTICS
+
+[INPUT PARAMETERS]
+
+- TIMEZONE
+
+  Used timezone (both for input and output parameters)
+
+  'SERVER'       --> Display times in SAP HANA server time
+  'UTC'          --> Display times in UTC time
+
+- HOST
+
+  Host name
+
+  'saphana01'     --> Specic host saphana01
+  'saphana%'      --> All hosts starting with saphana
+  '%'             --> All hosts
+
+- PORT
+
+  Port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- DB_NAME
+
+  Database name
+
+  'SYSTEMDB'      --> System database
+  'C11'           --> Tenant C11
+  '%'             --> No restriction to multitenant database
+
+- TARGET_HOST
+
+  Target host name
+
+  'saphana01'     --> Specic secondary host saphana01
+  'saphana%'      --> All secondary hosts starting with saphana
+  '%'             --> All secondary hosts
+
+- TARGET_PORT
+
+  Target port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- TARGET_DB_NAME
+
+  Target database name
+
+  'SYSTEMDB'      --> System database
+  'C11'           --> Tenant C11
+  '%'             --> No restriction to multitenant database
+
+[OUTPUT PARAMETERS]
+
+- HOST:                       Host
+- PORT:                       Port
+- DB_NAME:                    Database name
+- TARGET_HOST:                Target host
+- TARGET_PORT:                Target port
+- TARGET_DB_NAME:             Target database name
+- REPLICATION_STATUS:         Replication status
+- M:                          Replication mode ('S' -> SYNC, 'SM' -> SYNCMEM, 'A' -> ASYNC, 'U' -> UNKNOWN, 'ST' -> STANDBY)
+- RC:                         Number of reconnects
+- FC:                         Number of failovers
+- BF:                         Number of asynchronous log shipping buffer full situations
+- BACKLOG_GB:                 Replication backlog (GB)
+- BACKLOG_S:                  Replication backlog time (s)
+- REPLICATION_STATUS_DETAILS: Details about replication status
+- TARGET_CONNECT_TIME:        Time when replication target connected
+- LAST_LOG_POSITION:          Last log position on source
+- LAST_LOG_POS_TIME:          Time of last log on source
+- SHIPPED_LOG_POSITION:       Shipped log position
+- SHIPPED_LOG_POS_TIME:       Time of shipped log
+- RECOVERABLE:                TRUE when target is recoverable, otherwise FALSE
+
+[EXAMPLE OUTPUT]
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|HOST        |PORT |DB_NAME|TARGET_HOST |TARGET_PORT|TARGET_DB_NAME|REPLICATION_STATUS|M|RC|FC|BF|BACKLOG_GB|REPLICATION_STATUS_DETAILS        |TARGET_CONNECT_TIME|RECOVERABLE|
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|saphanahost1|31003|C11    |saphanatarg1|30401      |X11           |INITIALIZING      |A| 1| 0| 0|      0.67|Full Replica: 38 % (6045/15905 GB)|2026/06/17 14:48:23|FALSE      |
+|saphanahost1|31007|C11    |saphanatarg1|30401      |X11           |ACTIVE            |A| 1| 0| 0|      0.00|                                  |2026/06/17 14:48:25|TRUE       |
+|saphanahost2|31003|C11    |saphanatarg1|30401      |X11           |INITIALIZING      |A| 1| 0| 0|      0.00|Full Replica: 42 % (4104/9753 GB) |2026/06/17 14:48:24|FALSE      |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+*/
+
+  R.SOURCE_HOST HOST,
+  LPAD(R.SOURCE_PORT, 5) PORT,
+  R.SOURCE_DATABASE_NAME DB_NAME,
+  R.TARGET_HOST TARGET_HOST,
+  LPAD(R.TARGET_PORT, 5) TARGET_PORT,
+  R.TARGET_DATABASE_NAME TARGET_DB_NAME,
+  R.REPLICATION_STATUS,
+  MAP(R.REPLICATION_MODE, 'SYNC', 'S', 'SYNCMEM', 'SM', 'ASYNC', 'A', 'STANDBY', 'ST', 'UNKNOWN', 'U', R.REPLICATION_MODE) M,
+  LPAD(R.TARGET_RECONNECT_COUNT, 2) RC,
+  LPAD(R.TARGET_FAILOVER_COUNT, 2) FC,
+  LPAD(R.ASYNC_BUFFER_FULL_COUNT, 2) BF,
+  LPAD(TO_DECIMAL(R.BACKLOG_SIZE / 1024 / 1024 / 1024, 10, 2), 10) BACKLOG_GB,
+  LPAD(TO_DECIMAL(BACKLOG_TIME / 1000000, 10, 2), 9) BACKLOG_S,
+  R.REPLICATION_STATUS_DETAILS,
+  TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.TARGET_CONNECT_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.TARGET_CONNECT_TIME END, 
+    'YYYY/MM/DD HH24:MI:SS') TARGET_CONNECT_TIME,
+  R.LAST_LOG_POSITION,
+  TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.LAST_LOG_POSITION_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.LAST_LOG_POSITION_TIME END, 
+    'YYYY/MM/DD HH24:MI:SS') LAST_LOG_POS_TIME,
+  R.SHIPPED_LOG_POSITION,
+  TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(R.SHIPPED_LOG_POSITION_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE R.SHIPPED_LOG_POSITION_TIME END, 
+    'YYYY/MM/DD HH24:MI:SS') SHIPPED_LOG_POS_TIME,
+  R.TARGET_FULLY_RECOVERABLE RECOVERABLE
+FROM
+( SELECT                                                     /* Modification section */
+    'SERVER' TIMEZONE,
+    '%' HOST,
+    '%' TARGET_HOST,
+    '%' PORT,
+    '%' TARGET_PORT,
+    '%' DB_NAME,
+    '%' TARGET_DB_NAME
+  FROM
+    DUMMY
+) BI,
+  M_DATABASE_REPLICA_STATISTICS R
+WHERE
+  R.SOURCE_HOST LIKE BI.HOST AND
+  R.TARGET_HOST LIKE BI.TARGET_HOST AND
+  TO_VARCHAR(R.SOURCE_PORT) LIKE BI.PORT AND
+  TO_VARCHAR(R.TARGET_PORT) LIKE BI.TARGET_PORT AND
+  R.SOURCE_DATABASE_NAME LIKE BI.DB_NAME AND
+  R.TARGET_DATABASE_NAME LIKE BI.TARGET_DB_NAME
+ORDER BY
+  R.SOURCE_HOST,
+  R.SOURCE_PORT

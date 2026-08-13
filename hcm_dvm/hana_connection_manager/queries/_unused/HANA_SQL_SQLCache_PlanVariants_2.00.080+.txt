@@ -1,0 +1,475 @@
+WITH 
+
+/* 
+
+[NAME]
+
+- HANA_SQL_SQLCache_PlanVariants_2.00.080+
+
+[DESCRIPTION]
+
+- Overview of SQL plan cache variants
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- M_SQL_PLAN_VARIANT_STATISTICS available with SAP HANA >= 2.00.080
+- Data is only available when plan variant feature is activated:
+
+  indexserver.ini -> [sql] -> plan_variant_enabled = true
+
+- DISPLAY_STATEMENT_TEXT = ' ' can improve statement runtime, but columns TP and STATEMENT_STRING will not be populated
+- RESET can be performed via:
+
+  ALTER SYSTEM RESET MONITORING VIEW M_SQL_PLAN_VARIANT_STATISTICS_RESET
+
+[VALID FOR]
+
+- Revisions:              >= 2.00.080
+
+[SQL COMMAND VERSION]
+
+- 2025/07/16:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+- M_SQL_PLAN_VARIANT_STATISTICS
+- M_SQL_PLAN_VARIANT_STATISTICS_RESET
+
+[INPUT PARAMETERS]
+
+- HOST
+
+  Host name
+
+  'saphana01'     --> Specic host saphana01
+  'saphana%'      --> All hosts starting with saphana
+  '%'             --> All hosts
+
+- PORT
+
+  Port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- STATEMENT_HASH      
+ 
+  Hash of SQL statement to be analyzed
+
+  '2e960d7535bf4134e2bd26b9d80bd4fa' --> SQL statement with hash '2e960d7535bf4134e2bd26b9d80bd4fa'
+  '%'                                --> No statement hash restriction (only possible if hash is not mandatory)
+
+- SQL_PATTERN
+
+  Pattern for SQL text (case insensitive)
+
+  'INSERT%'       --> SQL statements starting with INSERT
+  '%DBTABLOG%'    --> SQL statements containing DBTABLOG
+  '%'             --> All SQL statements
+
+- VARIANT_FILTERS
+
+  Variant filters
+
+  'COL1'          --> Variant filter COL1
+  '%'             --> No restriction related to variant filters
+
+- SQL_TYPE
+
+  SQL type
+
+  'AI'            --> ALTER INDEX
+  'AS'            --> ALTER SYSTEM
+  'AT'            --> ALTER TABLE
+  'AL'            --> ALTER
+  'CA'            --> CALL
+  'CO'            --> COMMIT
+  'CI'            --> CREATE INDEX
+  'CT'            --> CREATE TABLE
+  'CR'            --> CREATE
+  'DE'            --> DELETE
+  'DI'            --> DROP INDEX
+  'DM'            --> Data modification commands (INSERT, UPDATE, DELETE, UPSERT, SELECT FOR UPDATE)
+  'DT'            --> DROP TABLE
+  'DR'            --> DROP
+  'EX'            --> EXECUTE
+  'IN'            --> INSERT
+  'ME'            --> MERGE INTO
+  'RE'            --> REPLACE
+  'RO'            --> ROLLBACK
+  'SU'            --> SELECT FOR UPDATE
+  'SE'            --> SELECT
+  'TR'            --> TRUNCATE
+  'UP'            --> UPDATE
+  'US'            --> UPSERT
+  'WI'            --> WITH
+  '%'             --> No restriction related to SQL type
+
+- EXCLUDE_CURRENT_RANGE_RESTRICTION
+
+  Possibility to exclude SQL statements ending with "WITH RANGE_RESTRICTION('CURRENT')" (i.e. accesses to hot data aging partitions)
+
+  'X'             --> Skip accesses to hot partitions in case of data aging tables
+  ' '             --> No restriction to current range restriction
+
+- DISPLAY_STATEMENT_TEXT
+
+  Possibility to enable / disable display of statement text (activation can significantly slow down the query)
+
+  'X'             --> Display statement text
+  ' '             --> Do not evaluate statement text
+
+- DATA_SOURCE
+
+  Source of analysis data
+
+  'CURRENT'       --> Data from memory information (M_* tables)
+  'RESET'         --> Data from reset memory information (M_*_RESET tables)
+
+- AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'HASH'          --> Aggregation by statement hash
+  'HOST, PLAN_ID' --> Aggregation by host and SQL plan ID
+  'NONE'          --> No aggregation
+
+- ORDER_BY
+
+  Sort order (available values are provided in comment)
+
+  'EXEC'          --> Sorting by execution time
+  'RECORDS'       --> Sorting by records
+
+[OUTPUT PARAMETERS]
+
+- STATEMENT_HASH:   Hash value of SQL statement
+- PLAN_ID:          Execution plan ID
+- PLAN_VARIANT_ID:  Plan variant ID
+- VARIANT_FILTERS:  Variant filters
+- TP:               SQL type (SE -> SELECT, IN -> INSERT, DE -> DELETE, UP -> UPDATE, ...), not filled in case of DISPLAY_STATEMENT_TEXT = ' '
+- RECORDS:          Total records
+- AVG_RECORDS:      Average records per execution
+- EXECUTIONS:       Total executions
+- EXEC_S:           Total execution time (s)
+- AVG_EXEC_MS:      Average time per execution (ms)
+- AVG_CUR_MS:       Average cursor time per execution (ms)
+- AVG_REC_MS:       Average time per record (ms)
+- AVG_LOCK_MS:      Average transactional lock wait time per execution (ms)
+- AVG_NW_MS:        Average service network request time per execution (ms)
+- AVG_THREADS:      Average JobWorker threads per execution
+- AVG_NW_REQ:       Average service network requests per execution
+- AVG_NW_MB:        Average size of service network requests per execution (MB)
+- AVG_MEM_MB:       Average memory allocation per execution (MB)
+- MEMORY_GB:        Total memory allocation (GB)
+- THREADS:          Total job worker threads used
+- AVG_OPEN_MS:      Average open time per execution (ms)
+- AVG_FETCH_MS:     Average fetch time per execution (ms)
+- PREPS:            Total preparations
+- PREP_MS:          Total preparation time (ms)
+- LOCK_MS:          Total lock wait time (ms)
+- NW_MB:            Total network size (MB)
+- CNT:              Number of SQL cache entries
+- HOST:             Host of statement execution ('various' if several hosts executed the command)
+- PORT:             Port
+- STATEMENT_STRING: SQL statement text
+
+[EXAMPLE OUTPUT]
+
+STATEMENT_HASH                  |PLAN_ID    |PLAN_VARIANT_ID|VARIANT_FILTERS                                                                 |TP|RECORDS      |AVG_RECORDS |EXECUTIONS  |EXEC_S  |AVG_EXEC_MS|AVG_CUR_MS|AVG_REC_MS|AVG_LOCK_MS|AVG_NW_MS|AVG_THREADS|AVG_NW_REQ|AVG_NW_MB|AVG_MEM_MB|MEMORY_GB |THREADS   |AVG_OPEN_MS|AVG_FETCH_MS|PREPS|PREP_MS   |LOCK_MS   |NW_MB   |CNT    |HOST        |PORT |STATEMENT_STRING                                                                                                                                                                                              
+fe9b392b2b1e7480c14bd732671ff6dc|11550700003|1              |SAPHANADB.SWNCMONIINDEX.PERIODSTRT > $6|SAPHANADB.SWNCMONIINDEX.PERIODTYPE = $4 |SE|            1|        0.16|           6|       0|       3.75|     15.36|      3.75|       0.00|     0.00|       0.00|      0.00|     0.00|      2.97|      0.01|         0|       0.42|        0.02|    2|        53|         0|       0|      1|tcc-s4hana-1|30003|SELECT "COMPONENT" , "COMPTYPE"                                                                                                                                         
+2cf1ff91541ab879882bfddaeacd5445|22995420003|1              |SAPHANADB.SSCOOKIE.USR = $5                                                     |SE|            2|        1.00|           2|       0|       1.13|     16.92|      1.13|       0.00|     0.00|       0.00|      0.00|     0.00|      3.34|      0.00|         0|       0.48|        0.05|    1|        18|         0|       0|      1|tcc-s4hana-1|30003|SELECT "MANDT" , "RELID" , "N                                                                                                                                                                             
+ab979d7f8c784d93c79df9fe66f2eebc|17277650003|1              |SAPHANADB./SDF/CALM_SCHED.CLIENT = $1                                           |SE|           17|        0.94|          18|       0|       2.25|      3.34|      2.25|       0.00|     0.00|       0.00|      0.00|     0.00|      2.20|      0.03|         0|       0.22|        0.12|    1|        14|         0|       0|      1|tcc-s4hana-1|30003|SELECT "DESTINATION" FROM "/SDF
+                                                                                                                                                                           
+
+*/
+
+BASIS_INFO AS
+( SELECT                             /* Modification section */
+    '%' HOST,
+    '%' PORT,
+    '%' STATEMENT_HASH,
+    '%' SQL_PATTERN,                             /* only works when DISPLAY_STATEMENT_TEXT = 'X' is set */
+    '%' VARIANT_FILTERS,
+    '%' SQL_TYPE,                                /* only works when DISPLAY_STATEMENT_TEXT = 'X' is set */
+    ' ' EXCLUDE_CURRENT_RANGE_RESTRICTION,      /* only works when DISPLAY_STATEMENT_TEXT = 'X' is set */
+    'X' DISPLAY_STATEMENT_TEXT,
+    'CURRENT' DATA_SOURCE,     /* CURRENT, RESET */
+    'NONE' AGGREGATE_BY,       /* HOST, PORT, HASH, SQL_TYPE, PLAN_ID, PLAN_VARIANT_ID, VARIANT_FILTERS or comma separated list, NONE for no aggregation */
+    'NONE' ORDER_BY         /* EXEC, PREP, CURSOR, OPEN, FETCH, LOCK, EXECUTIONS, RECORDS, NETWORK_COUNT, NETWORK_SIZE, NETWORK_TIME, MEMORY, MEM_PER_EXEC, THREAD */
+  FROM
+    DUMMY
+),
+SQL_CACHE AS
+( SELECT
+    'CURRENT' DATA_SOURCE,
+    HOST,
+    PORT,
+    STATEMENT_HASH,
+    PLAN_ID,
+    PLAN_VARIANT_ID,
+    VARIANT_FILTERS,
+    MAP(BI.DISPLAY_STATEMENT_TEXT, 'X', TO_VARCHAR(STATEMENT_STRING), '') STATEMENT_STRING,
+    MAP(BI.DISPLAY_STATEMENT_TEXT, 'X', REPLACE(UPPER(LTRIM(MAP(SUBSTR(TO_VARCHAR(STATEMENT_STRING), 1, 2), '/*', SUBSTR(TO_VARCHAR(STATEMENT_STRING), LOCATE(TO_VARCHAR(STATEMENT_STRING), '*/') + 2), TO_VARCHAR(STATEMENT_STRING)), ' ({')), CHAR(10), ''), '') STATEMENT_STRING_CLEANED,
+    EXECUTION_COUNT,
+    TOTAL_RESULT_RECORD_COUNT,
+    TOTAL_CURSOR_DURATION,
+    TOTAL_EXECUTION_TIME,
+    TOTAL_EXECUTION_OPEN_TIME,
+    TOTAL_EXECUTION_FETCH_TIME,
+    TOTAL_PREPARATION_TIME,
+    PREPARATION_COUNT,
+    TOTAL_LOCK_WAIT_DURATION,
+    LAST_PREPARATION_TIMESTAMP,
+    LAST_EXECUTION_TIMESTAMP,
+    TOTAL_SERVICE_NETWORK_REQUEST_COUNT,
+    TOTAL_SERVICE_NETWORK_REQUEST_DURATION,
+    TOTAL_SERVICE_NETWORK_REQUEST_SIZE,
+    TOTAL_CALLED_THREAD_COUNT,
+    TOTAL_EXECUTION_MEMORY_SIZE
+  FROM
+    ( SELECT DISPLAY_STATEMENT_TEXT FROM BASIS_INFO ) BI,
+    M_SQL_PLAN_VARIANT_STATISTICS
+  UNION ALL
+  SELECT
+    'RESET' DATA_SOURCE,
+    HOST,
+    PORT,
+    STATEMENT_HASH,
+    PLAN_ID,
+    PLAN_VARIANT_ID,
+    VARIANT_FILTERS,
+    MAP(BI.DISPLAY_STATEMENT_TEXT, 'X', TO_VARCHAR(STATEMENT_STRING), '') STATEMENT_STRING,
+    MAP(BI.DISPLAY_STATEMENT_TEXT, 'X', REPLACE(UPPER(LTRIM(MAP(SUBSTR(TO_VARCHAR(STATEMENT_STRING), 1, 2), '/*', SUBSTR(TO_VARCHAR(STATEMENT_STRING), LOCATE(TO_VARCHAR(STATEMENT_STRING), '*/') + 2), TO_VARCHAR(STATEMENT_STRING)), ' ({')), CHAR(10), ''), '') STATEMENT_STRING_CLEANED,
+    EXECUTION_COUNT,
+    TOTAL_RESULT_RECORD_COUNT,
+    TOTAL_CURSOR_DURATION,
+    TOTAL_EXECUTION_TIME,
+    TOTAL_EXECUTION_OPEN_TIME,
+    TOTAL_EXECUTION_FETCH_TIME,
+    TOTAL_PREPARATION_TIME,
+    PREPARATION_COUNT,
+    TOTAL_LOCK_WAIT_DURATION,
+    LAST_PREPARATION_TIMESTAMP,
+    LAST_EXECUTION_TIMESTAMP,
+    TOTAL_SERVICE_NETWORK_REQUEST_COUNT,
+    TOTAL_SERVICE_NETWORK_REQUEST_DURATION,
+    TOTAL_SERVICE_NETWORK_REQUEST_SIZE,
+    TOTAL_CALLED_THREAD_COUNT,
+    TOTAL_EXECUTION_MEMORY_SIZE
+  FROM
+    ( SELECT DISPLAY_STATEMENT_TEXT FROM BASIS_INFO ) BI,
+    M_SQL_PLAN_VARIANT_STATISTICS_RESET
+)
+SELECT
+  STATEMENT_HASH,
+  PLAN_ID,
+  PLAN_VARIANT_ID,
+  VARIANT_FILTERS,
+  SQL_TYPE TP,
+  LPAD(RECORDS, 13) RECORDS,
+  LPAD(TO_DECIMAL(REC_PER_EXEC, 10, 2), 12) AVG_RECORDS,
+  LPAD(EXECUTIONS, 12) EXECUTIONS,
+  LPAD(TO_DECIMAL(ROUND(EXEC_MS / 1000), 10, 0), 8) EXEC_S,
+  LPAD(TO_DECIMAL(EXEC_PER_EXEC_MS, 10, 2), 11) AVG_EXEC_MS,
+  LPAD(TO_DECIMAL(CUR_PER_EXEC_MS, 10, 2), 10) AVG_CUR_MS,
+  LPAD(TO_DECIMAL(EXEC_PER_REC_MS, 10, 2), 10) AVG_REC_MS,
+  LPAD(TO_DECIMAL(LOCK_PER_EXEC_MS, 10, 2), 11) AVG_LOCK_MS,
+  LPAD(TO_DECIMAL(NW_PER_EXEC_MS, 10, 2), 9) AVG_NW_MS,
+  LPAD(TO_DECIMAL(THR_PER_EXEC, 10, 2), 11) AVG_THREADS,
+  LPAD(TO_DECIMAL(NW_REQ_PER_EXEC, 10, 2), 10) AVG_NW_REQ,
+  LPAD(TO_DECIMAL(NW_PER_EXEC_MB, 10, 2), 9) AVG_NW_MB,
+  LPAD(TO_DECIMAL(MEM_PER_EXEC_MB, 10, 2), 10) AVG_MEM_MB,
+  LPAD(TO_DECIMAL(MEMORY_MB / 1024, 10, 2), 10) MEMORY_GB,
+  LPAD(THREADS, 10) THREADS,
+  LPAD(TO_DECIMAL(OPEN_PER_EXEC_MS, 10, 2), 11) AVG_OPEN_MS,
+  LPAD(TO_DECIMAL(FETCH_PER_EXEC_MS, 10, 2), 12) AVG_FETCH_MS,
+  LPAD(PREPARATIONS, 5) PREPS,
+  LPAD(TO_DECIMAL(ROUND(PREP_MS), 10, 0), 10) PREP_MS,
+  LPAD(TO_DECIMAL(ROUND(LOCK_WAIT_MS), 10, 0), 10) LOCK_MS,
+  LPAD(TO_DECIMAL(ROUND(NW_SIZE_MB), 10, 0), 8) NW_MB,
+  LPAD(NUM, 7) CNT,
+  HOST,
+  PORT,
+  REPLACE(REPLACE(REPLACE(STATEMENT_STRING, CHAR(9), CHAR(32)), CHAR(10), CHAR(32)), CHAR(13), CHAR(32)) STATEMENT_STRING
+FROM
+( SELECT
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HOST')            != 0 THEN HOST                        ELSE MAP(BI_HOST, '%', 'any', BI_HOST)                         END HOST,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PORT')            != 0 THEN TO_VARCHAR(PORT)            ELSE MAP(BI_PORT, '%', 'any', BI_PORT)                         END PORT,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HASH')            != 0 THEN STATEMENT_HASH              ELSE MAP(BI_STATEMENT_HASH, '%', 'any', BI_STATEMENT_HASH)     END STATEMENT_HASH,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PLAN_ID')         != 0 THEN TO_VARCHAR(PLAN_ID)         ELSE 'any'                                                     END PLAN_ID,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PLAN_VARIANT_ID') != 0 THEN TO_VARCHAR(PLAN_VARIANT_ID) ELSE 'any'                                                     END PLAN_VARIANT_ID,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'VARIANT_FILTERS') != 0 THEN VARIANT_FILTERS             ELSE MAP(BI_VARIANT_FILTERS, '%', 'any', BI_VARIANT_FILTERS)   END VARIANT_FILTERS,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HASH')            != 0 THEN STATEMENT_STRING            ELSE 'any'                                                     END STATEMENT_STRING,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'SQL_TYPE')        != 0 THEN SQL_TYPE                    ELSE MAP(BI_SQL_TYPE, '%', 'any', 'DM', SQL_TYPE, BI_SQL_TYPE) END SQL_TYPE,
+    COUNT(*) NUM,
+    SUM(EXECUTIONS) EXECUTIONS,
+    SUM(RECORDS) RECORDS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(RECORDS) / SUM(EXECUTIONS)) REC_PER_EXEC,
+    SUM(CURSOR_MS) CURSOR_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(CURSOR_MS) / SUM(EXECUTIONS)) CUR_PER_EXEC_MS,
+    MAP(GREATEST(SUM(EXECUTIONS), SUM(RECORDS)), 0, 0, SUM(EXEC_MS) / GREATEST(SUM(EXECUTIONS), SUM(RECORDS))) EXEC_PER_REC_MS,
+    SUM(EXEC_MS) EXEC_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(EXEC_MS) / SUM(EXECUTIONS)) EXEC_PER_EXEC_MS,
+    SUM(PREPARATIONS) PREPARATIONS,
+    SUM(PREP_MS) PREP_MS,
+    SUM(OPEN_MS) OPEN_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(OPEN_MS) / SUM(EXECUTIONS)) OPEN_PER_EXEC_MS,
+    SUM(FETCH_MS) FETCH_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(FETCH_MS) / SUM(EXECUTIONS)) FETCH_PER_EXEC_MS,
+    SUM(LOCK_WAIT_MS) LOCK_WAIT_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(LOCK_WAIT_MS) / SUM(EXECUTIONS)) LOCK_PER_EXEC_MS,
+    SUM(NETWORK_REQ) NETWORK_REQ,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(NETWORK_REQ) / SUM(EXECUTIONS)) NW_REQ_PER_EXEC,
+    SUM(NETWORK_MB) NW_SIZE_MB,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(NETWORK_MB) / SUM(EXECUTIONS)) NW_PER_EXEC_MB,
+    SUM(NETWORK_MS) NETWORK_MS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(NETWORK_MS) / SUM(EXECUTIONS)) NW_PER_EXEC_MS,
+    SUM(MEMORY_MB) MEMORY_MB,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(MEMORY_MB) / SUM(EXECUTIONS)) MEM_PER_EXEC_MB,
+    SUM(THREADS) THREADS,
+    MAP(SUM(EXECUTIONS), 0, 0, SUM(THREADS) / SUM(EXECUTIONS)) THR_PER_EXEC,
+    ORDER_BY
+  FROM
+  ( SELECT
+      HOST,
+      PORT,
+      STATEMENT_HASH,
+      SQL_TYPE,
+      PLAN_ID,
+      PLAN_VARIANT_ID,
+      VARIANT_FILTERS,
+      EXECUTION_COUNT EXECUTIONS,
+      TOTAL_RESULT_RECORD_COUNT RECORDS,
+      TOTAL_CURSOR_DURATION / 1000 CURSOR_MS,
+      TOTAL_PREPARATION_TIME / 1000 PREP_MS,
+      PREPARATION_COUNT PREPARATIONS,
+      TOTAL_EXECUTION_TIME / 1000 EXEC_MS,
+      TOTAL_EXECUTION_OPEN_TIME / 1000 OPEN_MS,
+      TOTAL_EXECUTION_FETCH_TIME / 1000 FETCH_MS,
+      TOTAL_LOCK_WAIT_DURATION / 1000 LOCK_WAIT_MS,
+      TOTAL_SERVICE_NETWORK_REQUEST_COUNT NETWORK_REQ,
+      TOTAL_SERVICE_NETWORK_REQUEST_SIZE / 1024 / 1024 NETWORK_MB,
+      TOTAL_SERVICE_NETWORK_REQUEST_DURATION / 1000 NETWORK_MS,
+      TOTAL_EXECUTION_MEMORY_SIZE / 1024 / 1024 MEMORY_MB,
+      TOTAL_CALLED_THREAD_COUNT THREADS,
+      STATEMENT_STRING,
+      REPLACE(UPPER(LTRIM(MAP(SUBSTR(TO_VARCHAR(STATEMENT_STRING), 1, 2), '/*', SUBSTR(TO_VARCHAR(STATEMENT_STRING), LOCATE(TO_VARCHAR(STATEMENT_STRING), '*/') + 2), TO_VARCHAR(STATEMENT_STRING)), ' ({')), CHAR(10), '') STATEMENT_STRING_CLEANED,
+      AGGREGATE_BY,
+      ORDER_BY,
+      BI_HOST,
+      BI_PORT,
+      BI_STATEMENT_HASH,
+      BI_VARIANT_FILTERS,
+      BI_SQL_TYPE
+    FROM
+    ( SELECT
+        C.*,
+        BI.AGGREGATE_BY,
+        BI.ORDER_BY,
+        BI.HOST BI_HOST,
+        BI.PORT BI_PORT,
+        BI.STATEMENT_HASH BI_STATEMENT_HASH,
+        BI.VARIANT_FILTERS BI_VARIANT_FILTERS,
+        BI.SQL_TYPE BI_SQL_TYPE
+      FROM
+        BASIS_INFO BI,
+      ( SELECT
+          DATA_SOURCE,
+          HOST,
+          PORT,
+          STATEMENT_HASH,
+          PLAN_ID,
+          PLAN_VARIANT_ID,
+          VARIANT_FILTERS,
+          STATEMENT_STRING,
+          CASE
+            WHEN STATEMENT_STRING_CLEANED LIKE 'ALTER INDEX%'       THEN 'AI'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'ALTER SYSTEM%'      THEN 'AS'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'ALTER TABLE%'       THEN 'AT'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'ALTER%'             THEN 'AL'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'CALL%'              THEN 'CA'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'COMMIT%'            THEN 'CO'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'CREATE INDEX%'      THEN 'CI'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'CREATE TABLE%'      THEN 'CT'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'CREATE%'            THEN 'CR'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'DELETE%'            THEN 'DE'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'DROP INDEX%'        THEN 'DI'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'DROP TABLE%'        THEN 'DT'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'DROP%'              THEN 'DR'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'EXECUTE%'           THEN 'EX'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'INSERT%'            THEN 'IN'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'MERGE%'             THEN 'ME'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'REPLACE%'           THEN 'RE'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'ROLLBACK%'          THEN 'RO'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'SELECT%FOR UPDATE%' THEN 'SU'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'SELECT%'            THEN 'SE'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'TRUNCATE%'          THEN 'TR'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'UPDATE%'            THEN 'UP'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'UPSERT%'            THEN 'US'
+            WHEN STATEMENT_STRING_CLEANED LIKE 'WITH%'              THEN 'WI'
+            ELSE 'unknown'
+          END SQL_TYPE,
+          MAX(EXECUTION_COUNT) EXECUTION_COUNT,
+          MAX(TOTAL_RESULT_RECORD_COUNT) TOTAL_RESULT_RECORD_COUNT,
+          MAX(TOTAL_CURSOR_DURATION) TOTAL_CURSOR_DURATION,
+          MAX(TOTAL_EXECUTION_TIME) TOTAL_EXECUTION_TIME,
+          MAX(TOTAL_EXECUTION_OPEN_TIME) TOTAL_EXECUTION_OPEN_TIME,
+          MAX(TOTAL_EXECUTION_FETCH_TIME) TOTAL_EXECUTION_FETCH_TIME,
+          MAX(TOTAL_PREPARATION_TIME) TOTAL_PREPARATION_TIME,
+          MAX(PREPARATION_COUNT) PREPARATION_COUNT,
+          MAX(TOTAL_LOCK_WAIT_DURATION) TOTAL_LOCK_WAIT_DURATION,
+          MAX(LAST_PREPARATION_TIMESTAMP) LAST_PREPARATION_TIMESTAMP,
+          MAX(LAST_EXECUTION_TIMESTAMP) LAST_EXECUTION_TIMESTAMP,
+          MAX(TOTAL_SERVICE_NETWORK_REQUEST_COUNT) TOTAL_SERVICE_NETWORK_REQUEST_COUNT,
+          MAX(TOTAL_SERVICE_NETWORK_REQUEST_DURATION) TOTAL_SERVICE_NETWORK_REQUEST_DURATION,
+          MAX(TOTAL_SERVICE_NETWORK_REQUEST_SIZE) TOTAL_SERVICE_NETWORK_REQUEST_SIZE,
+          MAX(TOTAL_CALLED_THREAD_COUNT) TOTAL_CALLED_THREAD_COUNT,
+          MAX(TOTAL_EXECUTION_MEMORY_SIZE) TOTAL_EXECUTION_MEMORY_SIZE
+        FROM
+          SQL_CACHE C
+        GROUP BY
+          DATA_SOURCE,
+          HOST,
+          PORT,
+          STATEMENT_HASH,
+          PLAN_ID,
+          PLAN_VARIANT_ID,
+          VARIANT_FILTERS,
+          STATEMENT_STRING,
+          STATEMENT_STRING_CLEANED
+      ) C
+      WHERE
+        C.HOST LIKE BI.HOST AND
+        TO_VARCHAR(C.PORT) LIKE BI.PORT AND
+        C.STATEMENT_HASH LIKE BI.STATEMENT_HASH AND
+        UPPER(C.STATEMENT_STRING) LIKE UPPER(BI.SQL_PATTERN) AND
+        C.VARIANT_FILTERS LIKE BI.VARIANT_FILTERS AND
+        ( BI.SQL_TYPE = 'DM' AND C.SQL_TYPE IN ('DE', 'IN', 'ME', 'SU', 'UP', 'US' ) OR
+          C.SQL_TYPE LIKE BI.SQL_TYPE
+        ) AND
+        C.DATA_SOURCE = BI.DATA_SOURCE AND
+        ( BI.EXCLUDE_CURRENT_RANGE_RESTRICTION = ' ' OR UPPER(C.STATEMENT_STRING) NOT LIKE '%WITH RANGE_RESTRICTION(_CURRENT_)' )
+    )
+  )
+  GROUP BY
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HOST')            != 0 THEN HOST                        ELSE MAP(BI_HOST, '%', 'any', BI_HOST)                         END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PORT')            != 0 THEN TO_VARCHAR(PORT)            ELSE MAP(BI_PORT, '%', 'any', BI_PORT)                         END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HASH')            != 0 THEN STATEMENT_HASH              ELSE MAP(BI_STATEMENT_HASH, '%', 'any', BI_STATEMENT_HASH)     END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PLAN_ID')         != 0 THEN TO_VARCHAR(PLAN_ID)         ELSE 'any'                                                     END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'PLAN_VARIANT_ID') != 0 THEN TO_VARCHAR(PLAN_VARIANT_ID) ELSE 'any'                                                     END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'VARIANT_FILTERS') != 0 THEN VARIANT_FILTERS             ELSE MAP(BI_VARIANT_FILTERS, '%', 'any', BI_VARIANT_FILTERS)   END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'HASH')            != 0 THEN STATEMENT_STRING            ELSE 'any'                                                     END,
+    CASE WHEN AGGREGATE_BY = 'NONE' OR INSTR(AGGREGATE_BY, 'SQL_TYPE')        != 0 THEN SQL_TYPE                    ELSE MAP(BI_SQL_TYPE, '%', 'any', 'DM', SQL_TYPE, BI_SQL_TYPE) END,
+    ORDER_BY
+)
+ORDER BY 
+  MAP(ORDER_BY, 'EXEC', EXEC_MS, 'PREP', PREP_MS, 'CURSOR', CURSOR_MS, 'OPEN', OPEN_MS, 'FETCH', FETCH_MS, 'LOCK', LOCK_WAIT_MS,
+    'EXECUTIONS', EXECUTIONS, 'RECORDS', RECORDS, 'NETWORK_COUNT', NETWORK_REQ, 'NETWORK_SIZE', NW_SIZE_MB, 'NETWORK_TIME', NETWORK_MS,
+    'MEMORY', MEMORY_MB, 'MEM_PER_EXEC', MEM_PER_EXEC_MB, 'THREAD', THREADS) DESC
+WITH HINT (IGNORE_PLAN_CACHE)

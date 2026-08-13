@@ -1,0 +1,175 @@
+SELECT
+
+/* 
+
+[NAME]
+
+- HANA_Configuration_Tasks
+
+[DESCRIPTION]
+
+- Overview of configured tasks
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+
+[VALID FOR]
+
+- Revisions:              all
+
+[SQL COMMAND VERSION]
+
+- 2025/02/25:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+- ACTIVE_OBJECT
+- ACTIVE_OBJECTCROSSREF
+- TASKS
+
+[INPUT PARAMETERS]
+
+- SCHEMA_NAME
+
+  Schema name
+
+  'SAPSR3'        --> Specific schema SAPSR3
+  'SAP%'          --> All schemata starting with 'SAP'
+  '%'             --> All schemata
+
+- TASK_NAME
+
+  Task name
+
+  'DQM_FOR_SAP_MATCH_TRANS' --> Task DQM_FOR_SAP_MATCH_TRANS
+  'DQM%'                    --> All tasks starting with "DQM"
+  '%'                       --> No restriction related to task name
+
+- REMOVE_LINE_FEEDS_IN_PLAN
+
+  Possibility to remove line feeds in the plan XML
+
+  'X'              --> Eliminate line feeds in plan XML
+  ' '              --> Keep line feeds in plan XML
+
+- MAX_PLAN_LEN
+
+  Maximum length of displayed plan XML
+
+  40                --> Display up to 40 characters for plan XML
+  -1                --> No limitation for displayed plan XML
+
+[OUTPUT PARAMETERS]
+
+- SCHEMA_NAME:       Task schema name
+- TASK_NAME:         Task name
+- CREATE_TIME:       Task creation time
+- SIZE_MB:           Task size (MB)
+- TASK_TYPE:         Task type
+- TTI:               'X' if modeled with table-type input, otherwise ''
+- SDQ:               'X' if smart data quality functionality is included, otherwise ''
+- RTT:               'X' if real-time task, otherwise ''
+- V:                 'X' if valid, otherwise ''
+- RO:                'X' if read-only, otherwise ''
+- IP:                Input parameter count
+- OP:                Output parameter count
+- SQL_SECURITY:      SQL security
+- PLAN:              Plan XML
+- DTO_XML:           Design time object XML
+- PROCEDURE_SCHEMA:  Procedure schema
+- PROCEDURE_NAME:    Procedure name
+- DTO_NAME:          Design time object name
+- DTO_TYPE:          Design time object type
+- DTO_PACKAGE:       Design time object package
+- IS_PART_OF_RT_DTO: TRUE if task belongs to real-time design-time object, otherwise FALSE
+
+[EXAMPLE OUTPUT]
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+|SCHEMA_NAME|TASK_NAME                        |CREATE_TIME        |SIZE_MB|TASK_TYPE|TTI|SDQ|RTT|V|RO|IP|OP|SQL_SECURITY|PLAN                                  |
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+|SAPABAP1   |DQM_FOR_SAP_CREATE_MATCH_FLDS    |2025/02/10 12:32:36|   2.38|PLAN     |X  |X  |X  |X|X | 1| 1|INVOKER     |<?xml version="1.0" encoding="utf-8"?>|
+|SAPABAP1   |DQM_FOR_SAP_MATCH_TRANS          |2025/02/13 16:18:18|   3.38|PLAN     |X  |X  |X  |X|X | 1| 1|INVOKER     |<?xml version="1.0" encoding="utf-8"?>|
+|SAPABAP1   |DQM_FOR_SAP_CREATE_MATCH_FLDS_BTC|2025/02/22 19:27:53|   2.38|PLAN     |   |X  |   |X|  | 0| 0|INVOKER     |<?xml version="1.0" encoding="utf-8"?>|
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+*/
+
+  T.SCHEMA_NAME,
+  T.TASK_NAME,
+  TO_VARCHAR(T.CREATE_TIME, 'YYYY/MM/DD HH24:MI:SS') CREATE_TIME,
+  LPAD(TO_DECIMAL(T.MEMORY_SIZE / 1024 / 1024, 10, 2), 7) SIZE_MB,
+  T.TASK_TYPE,
+  MAP(T.HAS_TABLE_TYPE_INPUT, 'TRUE', 'X', '') TTI,
+  MAP(T.HAS_SDQ, 'TRUE', 'X', '') SDQ,
+  MAP(T.IS_REALTIME_TASK, 'TRUE', 'X', '') RTT,
+  MAP(T.IS_VALID, 'TRUE', 'X', '') V,
+  MAP(T.IS_READ_ONLY, 'TRUE', 'X', '') RO,
+  LPAD(T.INPUT_PARAMETER_COUNT, 2) IP,
+  LPAD(T.OUTPUT_PARAMETER_COUNT, 2) OP,
+  T.SQL_SECURITY,
+  SUBSTR(CASE BI.REMOVE_LINE_FEEDS_IN_PLAN
+    WHEN 'X' THEN REPLACE(T.PLAN, CHAR(10), '')
+    ELSE T.PLAN
+  END, 1, MAP(BI.MAX_PLAN_LEN, -1, 99999, BI.MAX_PLAN_LEN)) PLAN,
+  CASE WHEN RTS.IS_PART_OF_REALTIME_DESIGN_TIME_OBJECT IS NULL AND T.IS_REALTIME_TASK = 'TRUE' THEN AO.CDATA ELSE '' END "DTO_XML",
+  T.PROCEDURE_SCHEMA,
+  T.PROCEDURE_NAME,
+  AO.OBJECT_NAME DTO_NAME,
+  AO.OBJECT_SUFFIX DTO_TYPE,
+  AO.PACKAGE_ID DTO_PACKAGE,
+  IFNULL(RTS.IS_PART_OF_REALTIME_DESIGN_TIME_OBJECT, IFNULL(RTT.IS_PART_OF_REALTIME_DESIGN_TIME_OBJECT, 'FALSE')) IS_PART_OF_RT_DTO
+FROM
+( SELECT               /* Modification section */
+    '%' SCHEMA_NAME,
+    '%' TASK_NAME,
+    'X' REMOVE_LINE_FEEDS_IN_PLAN,
+     40 MAX_PLAN_LEN
+  FROM
+    DUMMY
+) BI,
+  PUBLIC.TASKS T LEFT OUTER JOIN 
+  _SYS_REPO.ACTIVE_OBJECTCROSSREF OCR ON 
+    OCR.FROM_OBJECT_NAME = T.TASK_NAME AND 
+    OCR.FROM_PACKAGE_ID = T.SCHEMA_NAME AND 
+    OCR.FROM_OBJECT_SUFFIX = '__RT_CATALOG_TASK__' LEFT OUTER JOIN 
+  _SYS_REPO.ACTIVE_OBJECT AO ON 
+    OCR.TO_OBJECT_NAME = AO.OBJECT_NAME AND 
+    OCR.TO_OBJECT_SUFFIX = AO.OBJECT_SUFFIX AND 
+    OCR.TO_PACKAGE_ID = AO.PACKAGE_ID LEFT OUTER JOIN 
+  ( SELECT DISTINCT 
+      TO_OBJECT_NAME,
+      TO_OBJECT_SUFFIX,
+      TO_PACKAGE_ID,
+      'TRUE' IS_PART_OF_REALTIME_DESIGN_TIME_OBJECT
+    FROM 
+      _SYS_REPO.ACTIVE_OBJECTCROSSREF
+    WHERE 
+      FROM_OBJECT_SUFFIX = '__RT_CATALOG_REMOTE_SUBSCRIPTION__'
+  ) RTS ON 
+    RTS.TO_OBJECT_NAME = OCR.TO_OBJECT_NAME AND 
+    RTS.TO_OBJECT_SUFFIX = OCR.TO_OBJECT_SUFFIX AND 
+    RTS.TO_PACKAGE_ID = OCR.TO_PACKAGE_ID LEFT OUTER JOIN 
+  ( SELECT DISTINCT 
+      OCR.TO_OBJECT_NAME,
+      OCR.TO_OBJECT_SUFFIX,
+      OCR.TO_PACKAGE_ID,
+      'TRUE' IS_PART_OF_REALTIME_DESIGN_TIME_OBJECT
+    FROM 
+      _SYS_REPO.ACTIVE_OBJECTCROSSREF OCR INNER JOIN 
+      PUBLIC.TASKS T ON 
+        OCR.FROM_OBJECT_NAME = T.TASK_NAME AND 
+        OCR.FROM_PACKAGE_ID = T.SCHEMA_NAME AND 
+        OCR.FROM_OBJECT_SUFFIX = '__RT_CATALOG_TASK__' AND 
+        UPPER(T.IS_REALTIME_TASK) = 'TRUE'
+  ) RTT ON 
+    RTT.TO_OBJECT_NAME = OCR.TO_OBJECT_NAME AND 
+    RTT.TO_OBJECT_SUFFIX = OCR.TO_OBJECT_SUFFIX AND 
+    RTT.TO_PACKAGE_ID = OCR.TO_PACKAGE_ID
+WHERE
+  T.SCHEMA_NAME LIKE BI.SCHEMA_NAME AND
+  T.TASK_NAME LIKE BI.TASK_NAME

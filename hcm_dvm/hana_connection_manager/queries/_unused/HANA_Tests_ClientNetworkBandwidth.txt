@@ -1,0 +1,73 @@
+WITH 
+
+/* 
+
+[NAME]
+
+- HANA_Tests_ClientNetworkBandwidth
+
+[DESCRIPTION]
+
+- Runtime test for client network bandwidth
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- Can be executed to measure client network bandwidth
+- When statement is executed (once or several times), results can be retrieved from the SQL cache via
+  SQL: "HANA_Tests_Results" available in SAP Note 1969700
+- Make sure that this check is executed in the relevant client application, e.g. from within ABAP in case of an ABAP system. Otherwise,
+  results may not be representative for the relevant client application.
+- Make sure that the displayed result set is at least 10000 rows, otherwise the check may prematurely finish, resulting in too good measurements.
+
+[VALID FOR]
+
+- Revisions:              all
+
+[SQL COMMAND VERSION]
+
+- 2026/03/12:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+
+[INPUT PARAMETERS]
+
+- SQL_CACHE_TAG
+
+  Tag for identifying SQL cache entry related to statement execution
+
+  'ZMF_TEST_CLIENT_NETWORK_BANDWIDTH' -> Use SQL cache tag ZMF_TEST_CLIENT_NETWORK_BANDWIDTH
+
+[OUTPUT PARAMETERS]
+
+
+[EXAMPLE OUTPUT]
+
+
+*/
+
+BASIS_INFO AS
+( SELECT
+    'ZMF_TEST_CLIENT_NETWORK_BANDWIDTH' SQL_CACHE_TAG
+  FROM
+    DUMMY
+),
+DIGITS AS
+( SELECT 0 DIGIT FROM DUMMY UNION ALL
+  SELECT 1 DIGIT FROM DUMMY UNION ALL
+  SELECT 2 DIGIT FROM DUMMY UNION ALL
+  SELECT 3 DIGIT FROM DUMMY UNION ALL
+  SELECT 4 DIGIT FROM DUMMY UNION ALL
+  SELECT 5 DIGIT FROM DUMMY UNION ALL
+  SELECT 6 DIGIT FROM DUMMY UNION ALL
+  SELECT 7 DIGIT FROM DUMMY UNION ALL
+  SELECT 8 DIGIT FROM DUMMY UNION ALL
+  SELECT 9 DIGIT FROM DUMMY
+)
+SELECT
+  LPAD('X', 5000, 'X')
+FROM DIGITS A, DIGITS B, DIGITS C, DIGITS D

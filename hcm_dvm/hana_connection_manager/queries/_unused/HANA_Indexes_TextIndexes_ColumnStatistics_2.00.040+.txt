@@ -1,0 +1,141 @@
+SELECT
+
+/* 
+
+[NAME]
+
+- HANA_Indexes_TextIndexes_ColumnStatistics_2.00.040+
+
+[DESCRIPTION]
+
+- Fulltext column access statistics
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- Fails in SAP HANA Cloud (SHC) environments because fulltext indexes are no longer available:
+
+  invalid table name:  Could not find table/view M_FULLTEXT_QUEUES
+
+- Information is only collected when the following parameter is set:
+
+  indexserver.ini -> [text] -> enable_fulltext_column_statistics = true
+
+- Monitoring view M_FULLTEXT_COLUMN_STATISTICS available with SAP HANA >= 2.0 SPS 04
+
+[VALID FOR]
+
+- Revisions:              >= 2.00.040
+
+[SQL COMMAND VERSION]
+
+- 2026/03/13:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+- M_FULLTEXT_COLUMN_STATISTICS
+
+[INPUT PARAMETERS]
+
+- HOST
+
+  Host name
+
+  'saphana01'     --> Specific host saphana01
+  'saphana%'      --> All hosts starting with saphana
+  '%'             --> All hosts
+
+- PORT
+
+  Port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- TABLE_NAME           
+
+  Table name or pattern
+
+  'T000'          --> Specific table T000
+  'T%'            --> All tables starting with 'T'
+  '%'             --> All tables
+
+- COLUMN_NAME
+
+  Column name
+
+  'MATNR'         --> Column MATNR
+  'Z%'            --> Columns starting with "Z"
+  '%'             --> No restriction related to columns
+
+- MIN_LOOKUP_COUNT
+
+  Minimum threshold for lookups
+
+  1000            --> Only display results in case of more than 1000 lookups
+  -1              --> No restriction related to lookup count
+
+- ORDER_BY
+
+  Sort criteria (available values are provided in comment)
+
+  'LOOKUP_COUNT'  --> Sorting by lookup count
+  'TABLE'         --> Sorting by table name
+
+[OUTPUT PARAMETERS]
+
+- HOST:             Host
+- PORT:             Port
+- SCHEMA_NAME:      Schema name
+- TABLE_NAME:       Table name
+- COLUMN_NAME:      Column name
+- LOOKUPS:          Lookup count
+- LAST_LOOKUP_TIME: Last lookup time
+
+[EXAMPLE OUTPUT]
+
+----------------------------------------------------------------------------------------------------------------------
+|HOST        |PORT |SCHEMA_NAME|TABLE_NAME                     |COLUMN_NAME              |LOOKUPS|LAST_LOOKUP_TIME   |
+----------------------------------------------------------------------------------------------------------------------
+|saphananode1|30440|SAPR3      |SADL_QE_V_HEADER               |$_SYS_SHADOW_T1$         |   1422|2026/03/13 13:54:06|
+|saphananode1|30440|SAP_XS_LM  |sap.hana.xs.lm.slp::PARAMETERS1|COLL_XML                 |     17|2026/03/13 11:48:07|
+|saphananode1|30440|SAPR3      |RAP_MESSAGES_CC                |$_SYS_SHADOW_TARGET_PATH$|      2|2026/03/11 17:33:57|
+----------------------------------------------------------------------------------------------------------------------
+
+*/
+
+  T.HOST,
+  LPAD(T.PORT, 5) PORT,
+  T.SCHEMA_NAME,
+  T.TABLE_NAME,
+  T.COLUMN_NAME,
+  LPAD(T.LOOKUP_COUNT, 7) LOOKUPS,
+  TO_VARCHAR(T.LAST_LOOKUP_TIME, 'YYYY/MM/DD HH24:MI:SS') LAST_LOOKUP_TIME
+FROM
+( SELECT                   /* Modification section */
+    '%' HOST,
+    '%' PORT,
+    '%' SCHEMA_NAME,
+    '%' TABLE_NAME,
+    '%' COLUMN_NAME,
+    -1 MIN_LOOKUP_COUNT,
+    'LOOKUP_COUNT' ORDER_BY                  /* TABLE, LOOKUP_COUNT, LOOKUP_TIME */
+  FROM
+    DUMMY
+) BI,
+  M_FULLTEXT_COLUMN_STATISTICS T
+WHERE
+  T.HOST LIKE BI.HOST AND
+  TO_VARCHAR(T.PORT) LIKE BI.PORT AND
+  T.SCHEMA_NAME LIKE BI.SCHEMA_NAME AND
+  T.TABLE_NAME LIKE BI.TABLE_NAME AND
+  T.COLUMN_NAME LIKE BI.COLUMN_NAME AND
+  ( BI.MIN_LOOKUP_COUNT = -1 OR T.LOOKUP_COUNT >= BI.MIN_LOOKUP_COUNT )
+ORDER BY
+  MAP(BI.ORDER_BY, 'TABLE', T.HOST || T.PORT || T.SCHEMA_NAME || T.TABLE_NAME),
+  MAP(BI.ORDER_BY, 'LOOKUP_COUNT', T.LOOKUP_COUNT) DESC, 
+  MAP(BI.ORDER_BY, 'LOOKUP_TIME', T.LAST_LOOKUP_TIME) DESC

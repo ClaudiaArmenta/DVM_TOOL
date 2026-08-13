@@ -1,0 +1,175 @@
+SELECT
+
+/* 
+
+[NAME]
+
+- HANA_Logs_LogReplay_2.00.070+
+
+[DESCRIPTION]
+
+- Overview of log replay activities
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- M_LOG_REPLAY_QUEUE_STATISTICS.OPERATION_TYPE available with SAP HANA >= 2.00.070
+
+[VALID FOR]
+
+- Revisions:              >= 2.00.070
+
+[SQL COMMAND VERSION]
+
+- 2024/10/08:  1.0 (initial version)
+- 2024/10/09:  1.1 (dedicated 2.00.070+ version including OPERATION_TYPE)
+
+[INVOLVED TABLES]
+
+- M_LOG_REPLAY_QUEUE_STATISTICS
+
+[INPUT PARAMETERS]
+
+- HOST
+
+  Host name
+
+  'saphana01'     --> Specific host saphana01
+  'saphana%'      --> All hosts starting with saphana
+  '%'             --> All hosts
+
+- PORT
+
+  Port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- QUEUE_ID
+
+  Log replay queue ID
+
+  55              --> Log replay queue ID 55
+  -1              --> No restriction related to log replay queue ID
+
+- RECORD_TYPE
+
+  Log record type
+
+  'UNIFIED_TABLE' --> Log record type UNIFIED_TABLE
+  '%'             --> No restriction related to log record type
+
+- OPERATION_TYPE
+
+  Operation type
+
+  'Delete'        --> Operation type 'Delete'
+  '%'             --> No restriction related to operation type
+
+- AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'QUEUE_ID'      --> Aggregation by log replay queue ID
+  'HOST, PORT'    --> Aggregation by host and port
+  'NONE'          --> No aggregation
+
+- ORDER_BY
+
+  Sort criteria (available values are provided in comment)
+
+  'EXEC_TIME'     --> Sorting by total execution time
+  'LOG_SIZE'      --> Sorting by redo log size
+
+[OUTPUT PARAMETERS]
+
+- HOST:           Host
+- PORT:           Port
+- QUEUE_ID:       Log replay queue ID
+- RECORD_TYPE:    Log record type
+- OPERATION_TYPE: Operation type
+- LOG_RECORDS:    Number of log records
+- EXEC_TIME_S:    Total execution time (s)
+- WAIT_TIME_S:    Total wait time (s)
+- LOG_SIZE_MB:    Replayed redo log size (MB)
+- COUNT:          Number of aggregated elements
+
+[EXAMPLE OUTPUT]
+
+--------------------------------------------------------------------------------------------------
+|HOST         |PORT |QUEUE_ID|RECORD_TYPE  |LOG_RECORDS|EXEC_TIME_S|WAIT_TIME_S|LOG_SIZE_MB|COUNT|
+--------------------------------------------------------------------------------------------------
+|saphanadb_001|35003|      63|UNIFIED_TABLE|       1328|      12.00|      10.71|     488.62|    3|
+|saphanadb_001|35003|      31|UNIFIED_TABLE|        528|       1.78|       1.25|     164.09|    7|
+|saphanadb_001|35003|      76|UNIFIED_TABLE|          4|       9.35|       9.06|     127.61|    2|
+|saphanadb_001|35003|      25|UNIFIED_TABLE|        300|       6.78|       6.57|      69.97|    8|
+|saphanadb_001|35003|     198|UNIFIED_TABLE|          1|      14.10|      13.35|      11.35|    1|
+|saphanadb_001|35003|     234|UNIFIED_TABLE|          3|       9.39|       9.36|       3.83|    3|
+|saphanadb_001|35003|      40|UNIFIED_TABLE|        140|       0.11|       0.04|       3.64|    8|
+|saphanadb_001|35003|     235|UNIFIED_TABLE|          3|       9.56|       9.52|       0.85|    3|
+|saphanadb_001|35003|     409|UNIFIED_TABLE|        132|       0.07|       0.01|       0.82|    8|
+|saphanadb_001|35003|     162|UNIFIED_TABLE|        423|      27.04|      22.58|       0.27|    4|
+--------------------------------------------------------------------------------------------------
+
+*/
+
+  HOST,
+  LPAD(PORT, 5) PORT,
+  LPAD(QUEUE_ID, 8) QUEUE_ID,
+  RECORD_TYPE,
+  OPERATION_TYPE,
+  LPAD(LOG_RECORDS, 11) LOG_RECORDS,
+  LPAD(TO_DECIMAL(EXEC_TIME_S, 10, 2), 11) EXEC_TIME_S,
+  LPAD(TO_DECIMAL(WAIT_TIME_S, 10, 2), 11) WAIT_TIME_S,
+  LPAD(TO_DECIMAL(LOG_SIZE_MB, 10, 2), 11) LOG_SIZE_MB,
+  LPAD("COUNT", 5) "COUNT"
+FROM
+( SELECT
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')           != 0 THEN R.HOST                            ELSE MAP(BI.HOST,           '%', 'any', BI.HOST)                 END HOST,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')           != 0 THEN TO_VARCHAR(R.PORT)                ELSE MAP(BI.PORT,           '%', 'any', BI.PORT)                 END PORT,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'QUEUE_ID')       != 0 THEN TO_VARCHAR(R.LOG_REPLAY_QUEUE_ID) ELSE MAP(BI.QUEUE_ID,        -1, 'any', TO_VARCHAR(BI.QUEUE_ID)) END QUEUE_ID,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'RECORD_TYPE')    != 0 THEN R.LOG_RECORD_TYPE                 ELSE MAP(BI.RECORD_TYPE,    '%', 'any', BI.RECORD_TYPE)          END RECORD_TYPE,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'OPERATION_TYPE') != 0 THEN R.OPERATION_TYPE                  ELSE MAP(BI.OPERATION_TYPE, '%', 'any', BI.OPERATION_TYPE)       END OPERATION_TYPE,
+    COUNT(*) "COUNT",
+    SUM(R.TOTAL_LOG_RECORD_COUNT) LOG_RECORDS,
+    SUM(R.TOTAL_EXECUTION_TIME) / 1000000 EXEC_TIME_S,
+    SUM(R.TOTAL_WAIT_TIME) / 1000000 WAIT_TIME_S,
+    SUM(R.TOTAL_LOG_RECORD_SIZE) / 1024 / 1024 LOG_SIZE_MB,
+    BI.ORDER_BY
+  FROM
+  ( SELECT                     /* Modification section */
+      '%' HOST,
+      '%' PORT,
+       -1 QUEUE_ID,
+      '%' RECORD_TYPE,
+      '%' OPERATION_TYPE,
+      'NONE' AGGREGATE_BY,                 /* HOST, PORT, QUEUE_ID, RECORD_TYPE, OPERATION_TYPE comma separated combinations, NONE for no aggregation */
+      'LOG_SIZE' ORDER_BY                 /* QUEUE_ID, LOG_RECORDS, EXEC_TIME, WAIT_TIME, LOG_SIZE, COUNT */
+    FROM
+      DUMMY
+  ) BI,
+    M_LOG_REPLAY_QUEUE_STATISTICS R
+  WHERE
+    R.HOST LIKE BI.HOST AND
+    TO_VARCHAR(R.PORT) LIKE BI.PORT AND
+    ( BI.QUEUE_ID = -1 OR R.LOG_REPLAY_QUEUE_ID = BI.QUEUE_ID ) AND
+    R.LOG_RECORD_TYPE LIKE BI.RECORD_TYPE AND
+    R.OPERATION_TYPE LIKE BI.OPERATION_TYPE
+  GROUP BY
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')           != 0 THEN R.HOST                            ELSE MAP(BI.HOST,           '%', 'any', BI.HOST)                 END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')           != 0 THEN TO_VARCHAR(R.PORT)                ELSE MAP(BI.PORT,           '%', 'any', BI.PORT)                 END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'QUEUE_ID')       != 0 THEN TO_VARCHAR(R.LOG_REPLAY_QUEUE_ID) ELSE MAP(BI.QUEUE_ID,        -1, 'any', TO_VARCHAR(BI.QUEUE_ID)) END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'RECORD_TYPE')    != 0 THEN R.LOG_RECORD_TYPE                 ELSE MAP(BI.RECORD_TYPE,    '%', 'any', BI.RECORD_TYPE)          END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'OPERATION_TYPE') != 0 THEN R.OPERATION_TYPE                  ELSE MAP(BI.OPERATION_TYPE, '%', 'any', BI.OPERATION_TYPE)       END,
+    ORDER_BY
+)
+ORDER BY
+  MAP(ORDER_BY, 'QUEUE_ID', QUEUE_ID),
+  MAP(ORDER_BY, 'LOG_RECORDS', LOG_RECORDS, 'EXEC_TIME', EXEC_TIME_S, 'WAIT_TIME', WAIT_TIME_S, 'LOG_SIZE', LOG_SIZE_MB) DESC,
+  HOST,
+  PORT
+    

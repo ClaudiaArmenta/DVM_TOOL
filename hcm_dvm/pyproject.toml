@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hana-connection-manager"
+version = "2.1.0"
+description = "SAP HANA Data Volume Management Tool with reusable connection layer"
+requires-python = ">=3.9"
+dependencies = [
+    "dash>=2.14.0",
+    "dash-bootstrap-components>=1.5.0",
+    "pandas>=2.0.0",
+    "plotly>=5.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+native = ["hdbcli>=2.17.0"]
+gui = ["pywin32>=306"]
+all = ["hdbcli>=2.17.0", "pywin32>=306"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0"]
+
+[project.scripts]
+hana-dvm = "hana_connection_manager.main:run"
+
+[tool.setuptools.packages.find]
+include = ["hana_connection_manager*"]
+
+[tool.setuptools.package-data]
+hana_connection_manager = ["assets/*", "queries/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

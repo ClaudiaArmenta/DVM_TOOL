@@ -1,0 +1,379 @@
+SELECT
+
+/* 
+
+[NAME]
+
+- HANA_Security_AuditLog_2.00.030+
+
+[DESCRIPTION]
+
+- Overview of audit log data
+
+[SOURCE]
+
+- SAP Note 1969700
+
+[DETAILS AND RESTRICTIONS]
+
+- AUDIT_LOG information only readable when AUDIT ADMIN, AUDIT OPERATOR or AUDIT READ privilege is granted
+- AUDIT_LOG.APPLICATION_NAME available with SAP HANA >= 2.00.030
+
+[VALID FOR]
+
+- Revisions:              >= 2.00.030
+
+[SQL COMMAND VERSION]
+
+- 2025/07/27:  1.0 (initial version)
+
+[INVOLVED TABLES]
+
+- AUDIT_LOG
+
+[INPUT PARAMETERS]
+
+- BEGIN_TIME
+
+  Begin time
+
+  '2018/12/05 14:05:00' --> Set begin time to 5th of December 2018, 14:05
+  'C'                   --> Set begin time to current time
+  'C-S900'              --> Set begin time to current time minus 900 seconds
+  'C-M15'               --> Set begin time to current time minus 15 minutes
+  'C-H5'                --> Set begin time to current time minus 5 hours
+  'C-D1'                --> Set begin time to current time minus 1 day
+  'C-W4'                --> Set begin time to current time minus 4 weeks
+  'E-S900'              --> Set begin time to end time minus 900 seconds
+  'E-M15'               --> Set begin time to end time minus 15 minutes
+  'E-H5'                --> Set begin time to end time minus 5 hours
+  'E-D1'                --> Set begin time to end time minus 1 day
+  'E-W4'                --> Set begin time to end time minus 4 weeks
+  'MIN'                 --> Set begin time to minimum (1000/01/01 00:00:00)
+
+- END_TIME
+
+  End time
+
+  '2018/12/08 14:05:00' --> Set end time to 8th of December 2018, 14:05
+  'C'                   --> Set end time to current time
+  'C-S900'              --> Set end time to current time minus 900 seconds
+  'C-M15'               --> Set end time to current time minus 15 minutes
+  'C-H5'                --> Set end time to current time minus 5 hours
+  'C-D1'                --> Set end time to current time minus 1 day
+  'C-W4'                --> Set end time to current time minus 4 weeks
+  'B+S900'              --> Set end time to begin time plus 900 seconds
+  'B+M15'               --> Set end time to begin time plus 15 minutes
+  'B+H5'                --> Set end time to begin time plus 5 hours
+  'B+D1'                --> Set end time to begin time plus 1 day
+  'B+W4'                --> Set end time to begin time plus 4 weeks
+  'MAX'                 --> Set end time to maximum (9999/12/31 23:59:59)
+
+- HOST
+
+  Host name
+
+  'saphana01'     --> Specific host saphana01
+  'saphana%'      --> All hosts starting with saphana
+  '%'             --> All hosts
+
+- PORT
+
+  Port number
+
+  '30007'         --> Port 30007
+  '%03'           --> All ports ending with '03'
+  '%'             --> No restriction to ports
+
+- CLIENT_IP
+
+  IP address of client
+
+  '172.23.4.12'   --> IP address 172.23.4.12 
+  '%'             --> No restriction related to IP address
+
+- CLIENT_PID
+
+  Client process ID
+
+  10264           --> Client process ID 10264
+  -1              --> No client process ID restriction
+
+- DB_USER
+
+  Database user
+
+  'SYSTEM'        --> Database user 'SYSTEM'
+  '%'             --> No database user restriction
+
+- APP_USER
+
+  Application user
+
+  'SAPSYS'        --> Application user 'SAPSYS'
+  '%'             --> No application user restriction
+
+- APP_NAME
+
+  Name of application
+
+  'ABAP:C11'      --> Application name 'ABAP:C11'
+  '%'             --> No application name restriction
+
+- POLICY_NAME
+
+  Name of audit policy
+
+  'ChangeOfUsers' --> Restrict output to audit policy ChangeOfUsers
+  'C%'            --> Only display audit policies starting with 'C'
+  '%'             --> No restriction related to audit policy name
+
+
+- STATUS
+
+  Event status
+
+  'SUCCESSFUL'    --> Events with status SUCCESSFUL
+  '%'             --> No limitation related to event status
+
+- LEVEL
+
+  Event level
+
+  'CRITICAL'      --> Events with level CRITICAL
+  '%'             --> No limitation related to event level
+
+- ACTION
+
+  Event action
+
+  'CLEAR AUDIT LOG' --> Event action 'CLEAR AUDIT LOG'
+  '%'               --> No limitation related to event action
+
+- SQL_TEXT
+
+  Statement string
+
+  'INSERT%'       --> Statements starting with INSERT
+  '%'             --> No restriction related to statement string
+
+- AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'TIME'          --> Aggregation by time
+  'HOST, PORT'    --> Aggregation by host and port
+  'NONE'          --> No aggregation
+
+- TIME_AGGREGATE_BY
+
+  Aggregation criteria (possible values can be found in comment)
+
+  'HOUR'          --> Aggregation by hour
+  'YYYY/WW'       --> Aggregation by calendar week
+  'TS<seconds>'   --> Time slice aggregation based on <seconds> seconds
+  'NONE'          --> No aggregation
+
+- ORDER_BY
+
+  Sort criteria (available values are provided in comment)
+
+  'TIME'          --> Sorting by auditing timestamp
+  'COUNT'         --> Sorting by number of auditing records
+
+[OUTPUT PARAMETERS]
+
+- AUDIT_TIME:  Timestamp of audit record
+- COUNT:       Number of audit records
+- POLICY_NAME: Audit policy name
+- STATUS:      Event status
+- LEVEL:       Event level
+- ACTION:      Event action
+- HOST:        Host name
+- PORT:        Port
+- CLIENT_IP:   Client IP
+- CLIENT_PID:  Client process ID
+- DB_USER:     Database user
+- APP_USER:    Application user
+- APP_NAME:    Application name
+- SQL_TEXT:    Statement string
+
+[EXAMPLE OUTPUT]
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|AUDIT_TIME                 |COUNT|POLICY_NAME         |STATUS      |LEVEL   |ACTION                     |HOST        |PORT |CLIENT_IP    |CLIENT_PID|DB_USER        |APP_USER    |APP_NAME  |SQL_TEXT                                                                                                                                                                                                |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|2025/07/18 01:00:22:3365380|1    |MandatoryAuditPolicy|SUCCESSFUL  |CRITICAL|CLEAR AUDIT LOG            |saphanahost1|30003|10.0.70.111  |   1274071|HANACLEANERUSER|c11adm      |hdbsql    |ALTER SYSTEM CLEAR AUDIT LOG UNTIL '2025-05-19 01:00:22'                                                                                                                                                |
+|2025/07/17 01:00:23:5076270|1    |MandatoryAuditPolicy|SUCCESSFUL  |CRITICAL|CLEAR AUDIT LOG            |saphanahost1|30003|10.0.70.111  |   1056531|HANACLEANERUSER|c11adm      |hdbsql    |ALTER SYSTEM CLEAR AUDIT LOG UNTIL '2025-05-18 01:00:23'                                                                                                                                                |
+|2025/07/16 12:37:22:6474960|1    |Parameter changes   |SUCCESSFUL  |INFO    |SYSTEM CONFIGURATION CHANGE|saphanahost1|30003|10.0.68.222  |      3271|SAPC11         |FRAUENDORFER|ABAP:C11  |alter system alter configuration('indexserver.ini','system') set ('sql','plan_variant_enabled')='true' with reconfigure                                                                                 |
+|2025/07/16 01:00:21:7066100|1    |MandatoryAuditPolicy|SUCCESSFUL  |CRITICAL|CLEAR AUDIT LOG            |saphanahost1|30003|10.0.70.111  |    867458|HANACLEANERUSER|c11adm      |hdbsql    |ALTER SYSTEM CLEAR AUDIT LOG UNTIL '2025-05-17 01:00:21'                                                                                                                                                |
+|2025/07/15 01:00:21:5276140|1    |MandatoryAuditPolicy|SUCCESSFUL  |CRITICAL|CLEAR AUDIT LOG            |saphanahost1|30003|10.0.70.111  |    675016|HANACLEANERUSER|c11adm      |hdbsql    |ALTER SYSTEM CLEAR AUDIT LOG UNTIL '2025-05-16 01:00:21'                                                                                                                                                |
+|2025/07/14 01:00:21:5502130|1    |MandatoryAuditPolicy|SUCCESSFUL  |CRITICAL|CLEAR AUDIT LOG            |saphanahost1|30003|10.0.70.111  |    483700|HANACLEANERUSER|c11adm      |hdbsql    |ALTER SYSTEM CLEAR AUDIT LOG UNTIL '2025-05-15 01:00:21'                                                                                                                                                |
+|2025/07/13 12:23:48:7151660|1    |ZLH_AUDIT_DEMO      |SUCCESSFUL  |INFO    |INSERT                     |saphanahost1|30003|10.0.68.222  |      3277|SAPC11         |YUMUNGYUNG  |ABAP:C11  |INSERT INTO "CDPOS" VALUES( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? ),('800', 'NRINTERVAL', 'SO_OBJ_RAW', '0000757476', 'INRIV', '      012025', 'KEY', 'I', '1', '', '', '', '...|
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+*/
+
+  AUDIT_TIME,
+  LPAD(NUM_ROWS, 10) "COUNT",
+  POLICY_NAME,
+  STATUS,
+  LEVEL,
+  ACTION,
+  HOST,
+  LPAD(PORT, 5) PORT,
+  CLIENT_IP,
+  LPAD(CLIENT_PID, 10) CLIENT_PID,
+  DB_USER,
+  APP_USER,
+  APP_NAME,
+  SQL_TEXT
+FROM 
+( SELECT
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(AL.TIMESTAMP, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE AL.TIMESTAMP END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(AL.TIMESTAMP, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE AL.TIMESTAMP END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END AUDIT_TIME,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')        != 0 THEN AL.HOST                         ELSE MAP(BI.HOST,        '%', 'any', BI.HOST)                   END HOST,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')        != 0 THEN TO_VARCHAR(AL.PORT)             ELSE MAP(BI.PORT,        '%', 'any', BI.PORT)                   END PORT,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_IP')   != 0 THEN AL.CLIENT_IP                    ELSE MAP(BI.CLIENT_IP,   '%', 'any', BI.CLIENT_IP)              END CLIENT_IP,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_PID')  != 0 THEN TO_VARCHAR(AL.CLIENT_PID)       ELSE MAP(BI.CLIENT_PID,   -1, 'any', TO_VARCHAR(BI.CLIENT_PID)) END CLIENT_PID,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'DB_USER')     != 0 THEN AL.USER_NAME                    ELSE MAP(BI.DB_USER,     '%', 'any', BI.DB_USER)                END DB_USER,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')    != 0 THEN AL.APPLICATION_USER_NAME        ELSE MAP(BI.APP_USER,    '%', 'any', BI.APP_USER)               END APP_USER,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_NAME')    != 0 THEN AL.APPLICATION_NAME             ELSE MAP(BI.APP_NAME,    '%', 'any', BI.APP_NAME)               END APP_NAME,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'POLICY_NAME') != 0 THEN AL.AUDIT_POLICY_NAME            ELSE MAP(BI.POLICY_NAME, '%', 'any', BI.POLICY_NAME)            END POLICY_NAME,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATUS')      != 0 THEN AL.EVENT_STATUS                 ELSE MAP(BI.STATUS,      '%', 'any', BI.STATUS)                 END STATUS,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'LEVEL')       != 0 THEN AL.EVENT_LEVEL                  ELSE MAP(BI.LEVEL,       '%', 'any', BI.LEVEL)                  END LEVEL,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'ACTION')      != 0 THEN AL.EVENT_ACTION                 ELSE MAP(BI.ACTION,      '%', 'any', BI.ACTION)                 END ACTION,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SQL_TEXT')    != 0 THEN TO_VARCHAR(AL.STATEMENT_STRING) ELSE MAP(BI.SQL_TEXT,    '%', 'any', BI.SQL_TEXT)               END SQL_TEXT,
+    COUNT(*) NUM_ROWS,
+    BI.ORDER_BY
+  FROM
+  ( SELECT
+      CASE
+        WHEN BEGIN_TIME =    'C'                             THEN CURRENT_TIMESTAMP
+        WHEN BEGIN_TIME LIKE 'C-S%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-S'))
+        WHEN BEGIN_TIME LIKE 'C-M%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-M') * 60)
+        WHEN BEGIN_TIME LIKE 'C-H%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-H') * 3600)
+        WHEN BEGIN_TIME LIKE 'C-D%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-D') * 86400)
+        WHEN BEGIN_TIME LIKE 'C-W%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(BEGIN_TIME, 'C-W') * 86400 * 7)
+        WHEN BEGIN_TIME LIKE 'E-S%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-S'))
+        WHEN BEGIN_TIME LIKE 'E-M%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-M') * 60)
+        WHEN BEGIN_TIME LIKE 'E-H%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-H') * 3600)
+        WHEN BEGIN_TIME LIKE 'E-D%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-D') * 86400)
+        WHEN BEGIN_TIME LIKE 'E-W%'                          THEN ADD_SECONDS(TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS'), -SUBSTR_AFTER(BEGIN_TIME, 'E-W') * 86400 * 7)
+        WHEN BEGIN_TIME =    'MIN'                           THEN TO_TIMESTAMP('1000/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS')
+        WHEN SUBSTR(BEGIN_TIME, 1, 1) NOT IN ('C', 'E', 'M') THEN TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS')
+      END BEGIN_TIME,
+      CASE
+        WHEN END_TIME =    'C'                             THEN CURRENT_TIMESTAMP
+        WHEN END_TIME LIKE 'C-S%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-S'))
+        WHEN END_TIME LIKE 'C-M%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-M') * 60)
+        WHEN END_TIME LIKE 'C-H%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-H') * 3600)
+        WHEN END_TIME LIKE 'C-D%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-D') * 86400)
+        WHEN END_TIME LIKE 'C-W%'                          THEN ADD_SECONDS(CURRENT_TIMESTAMP, -SUBSTR_AFTER(END_TIME, 'C-W') * 86400 * 7)
+        WHEN END_TIME LIKE 'B+S%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+S'))
+        WHEN END_TIME LIKE 'B+M%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+M') * 60)
+        WHEN END_TIME LIKE 'B+H%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+H') * 3600)
+        WHEN END_TIME LIKE 'B+D%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+D') * 86400)
+        WHEN END_TIME LIKE 'B+W%'                          THEN ADD_SECONDS(TO_TIMESTAMP(BEGIN_TIME, 'YYYY/MM/DD HH24:MI:SS'), SUBSTR_AFTER(END_TIME, 'B+W') * 86400 * 7)
+        WHEN END_TIME =    'MAX'                           THEN TO_TIMESTAMP('9999/12/31 00:00:00', 'YYYY/MM/DD HH24:MI:SS')
+        WHEN SUBSTR(END_TIME, 1, 1) NOT IN ('C', 'B', 'M') THEN TO_TIMESTAMP(END_TIME, 'YYYY/MM/DD HH24:MI:SS')
+      END END_TIME,
+      TIMEZONE,
+      HOST,
+      PORT,
+      CLIENT_IP,
+      CLIENT_PID,
+      DB_USER,
+      APP_USER,
+      APP_NAME,
+      POLICY_NAME,
+      STATUS,
+      LEVEL,
+      ACTION,
+      SQL_TEXT,
+      AGGREGATE_BY,
+      MAP(TIME_AGGREGATE_BY,
+        'NONE',        'YYYY/MM/DD HH24:MI:SS:FF7',
+        'HOUR',        'YYYY/MM/DD HH24',
+        'DAY',         'YYYY/MM/DD (DY)',
+        'HOUR_OF_DAY', 'HH24',
+        TIME_AGGREGATE_BY ) TIME_AGGREGATE_BY,
+      ORDER_BY
+    FROM
+    ( SELECT                                                         /* Modification section */
+        '1000/10/18 07:58:00' BEGIN_TIME,                  /* YYYY/MM/DD HH24:MI:SS timestamp, C, C-S<seconds>, C-M<minutes>, C-H<hours>, C-D<days>, C-W<weeks>, E-S<seconds>, E-M<minutes>, E-H<hours>, E-D<days>, E-W<weeks>, MIN */
+        '9999/10/18 08:05:00' END_TIME,                    /* YYYY/MM/DD HH24:MI:SS timestamp, C, C-S<seconds>, C-M<minutes>, C-H<hours>, C-D<days>, C-W<weeks>, B+S<seconds>, B+M<minutes>, B+H<hours>, B+D<days>, B+W<weeks>, MAX */
+        'SERVER' TIMEZONE,                              /* SERVER, UTC */
+        '%' HOST,
+        '%' PORT,
+        '%' CLIENT_IP,
+         -1 CLIENT_PID,
+        '%' DB_USER,
+        '%' APP_USER,
+        '%' APP_NAME,
+        '%' POLICY_NAME,
+        '%' STATUS,
+        '%' LEVEL,
+        '%' ACTION,
+        '%' SQL_TEXT,
+        'DB_USER, APP_USER' AGGREGATE_BY,         /* TIME, HOST, PORT, CLIENT_IP, CLIENT_PID, DB_USER, APP_USER, APP_NAME, POLICY, STATUS, LEVEL, ACTION, SQL_TEXT or comma separated combinations, NONE for no aggregation */
+        'NONE' TIME_AGGREGATE_BY,     /* HOUR, DAY, HOUR_OF_DAY or database time pattern, TS<seconds> for time slice, NONE for no aggregation */
+        'COUNT' ORDER_BY             /* COUNT, TIME */
+      FROM
+        DUMMY
+    )
+  ) BI,
+    AUDIT_LOG AL
+  WHERE
+    AL.HOST LIKE BI.HOST AND  
+    TO_VARCHAR(AL.PORT) LIKE BI.PORT AND
+    CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(AL.TIMESTAMP, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE AL.TIMESTAMP END BETWEEN BI.BEGIN_TIME AND BI.END_TIME AND
+    AL.CLIENT_IP LIKE BI.CLIENT_IP AND
+    ( BI.CLIENT_PID = -1 OR AL.CLIENT_PID = BI.CLIENT_PID ) AND
+    AL.USER_NAME LIKE BI.DB_USER AND
+    AL.APPLICATION_USER_NAME LIKE BI.APP_USER AND
+    AL.APPLICATION_NAME LIKE BI.APP_NAME AND
+    AL.AUDIT_POLICY_NAME LIKE BI.POLICY_NAME AND
+    AL.EVENT_STATUS LIKE BI.STATUS AND
+    AL.EVENT_LEVEL LIKE BI.LEVEL AND
+    AL.EVENT_ACTION LIKE BI.ACTION AND
+    AL.STATEMENT_STRING LIKE BI.SQL_TEXT
+  GROUP BY
+    CASE 
+      WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'TIME') != 0 THEN 
+        CASE 
+          WHEN BI.TIME_AGGREGATE_BY LIKE 'TS%' THEN
+            TO_VARCHAR(ADD_SECONDS(TO_TIMESTAMP('2014/01/01 00:00:00', 'YYYY/MM/DD HH24:MI:SS'), FLOOR(SECONDS_BETWEEN(TO_TIMESTAMP('2014/01/01 00:00:00', 
+            'YYYY/MM/DD HH24:MI:SS'), CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(AL.TIMESTAMP, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE AL.TIMESTAMP END) / SUBSTR(BI.TIME_AGGREGATE_BY, 3)) * SUBSTR(BI.TIME_AGGREGATE_BY, 3)), 'YYYY/MM/DD HH24:MI:SS')
+          ELSE TO_VARCHAR(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(AL.TIMESTAMP, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE AL.TIMESTAMP END, BI.TIME_AGGREGATE_BY)
+        END
+      ELSE 'any' 
+    END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'HOST')        != 0 THEN AL.HOST                         ELSE MAP(BI.HOST,        '%', 'any', BI.HOST)                   END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'PORT')        != 0 THEN TO_VARCHAR(AL.PORT)             ELSE MAP(BI.PORT,        '%', 'any', BI.PORT)                   END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_IP')   != 0 THEN AL.CLIENT_IP                    ELSE MAP(BI.CLIENT_IP,   '%', 'any', BI.CLIENT_IP)              END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'CLIENT_PID')  != 0 THEN TO_VARCHAR(AL.CLIENT_PID)       ELSE MAP(BI.CLIENT_PID,   -1, 'any', TO_VARCHAR(BI.CLIENT_PID)) END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'DB_USER')     != 0 THEN AL.USER_NAME                    ELSE MAP(BI.DB_USER,     '%', 'any', BI.DB_USER)                END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_USER')    != 0 THEN AL.APPLICATION_USER_NAME        ELSE MAP(BI.APP_USER,    '%', 'any', BI.APP_USER)               END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'APP_NAME')    != 0 THEN AL.APPLICATION_NAME             ELSE MAP(BI.APP_NAME,    '%', 'any', BI.APP_NAME)               END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'POLICY_NAME') != 0 THEN AL.AUDIT_POLICY_NAME            ELSE MAP(BI.POLICY_NAME, '%', 'any', BI.POLICY_NAME)            END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'STATUS')      != 0 THEN AL.EVENT_STATUS                 ELSE MAP(BI.STATUS,      '%', 'any', BI.STATUS)                 END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'LEVEL')       != 0 THEN AL.EVENT_LEVEL                  ELSE MAP(BI.LEVEL,       '%', 'any', BI.LEVEL)                  END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'ACTION')      != 0 THEN AL.EVENT_ACTION                 ELSE MAP(BI.ACTION,      '%', 'any', BI.ACTION)                 END,
+    CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'SQL_TEXT')    != 0 THEN TO_VARCHAR(AL.STATEMENT_STRING) ELSE MAP(BI.SQL_TEXT,    '%', 'any', BI.SQL_TEXT)               END,
+    BI.ORDER_BY
+)
+ORDER BY
+  MAP(ORDER_BY, 'TIME', AUDIT_TIME) DESC,
+  MAP(ORDER_BY, 'COUNT', NUM_ROWS) DESC,
+  AUDIT_TIME,
+  NUM_ROWS,
+  POLICY_NAME

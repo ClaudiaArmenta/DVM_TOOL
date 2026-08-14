@@ -1734,3 +1734,50 @@ textarea.dvm-input,
 .dvm-table-btn .bi { font-size: 12px; }
 .dvm-table-btn.is-ok { color: var(--dvm-success); border-color: var(--dvm-success); }
 .dvm-table-btn.is-err { color: var(--dvm-error); border-color: var(--dvm-error); }
+
+/* ── Help / FAQ dialog ─────────────────────────────────────────────────── */
+.dvm-dialog-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center; padding: var(--sp-4);
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+.dvm-help-dialog {
+  width: min(560px, 100%); max-height: 85vh; overflow: auto;
+  background: var(--dvm-surface); color: var(--dvm-text);
+  border: 1px solid var(--dvm-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown); padding: var(--sp-5) var(--sp-6);
+}
+.dvm-help-head { display: flex; align-items: center; gap: 8px; margin-bottom: var(--sp-3); }
+.dvm-help-title { font-family: var(--dvm-font-heading); font-weight: 600; font-size: 18px; }
+.dvm-help-q {
+  font-family: var(--dvm-font-heading); font-weight: 600; font-size: 15px;
+  margin: var(--sp-3) 0 var(--sp-2); color: var(--dvm-text);
+}
+.dvm-help-dialog p { font-size: 13px; color: var(--dvm-text-secondary); margin: 0 0 var(--sp-2); }
+.dvm-help-steps {
+  margin: 0 0 var(--sp-3); padding-left: 20px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dvm-help-steps li { font-size: 13px; line-height: 1.5; color: var(--dvm-text); }
+.dvm-help-steps li::marker { color: var(--dvm-primary); font-weight: 700; }
+.dvm-help-contact {
+  display: flex; align-items: center; font-size: 13px; margin-top: var(--sp-3);
+  padding-top: var(--sp-3); border-top: 1px solid var(--dvm-border);
+}
+
+/* ── Print / PDF: hide chrome, expand every analysis section ────────────── */
+@media print {
+  .dvm-header, .dvm-sidebar, .dvm-lang-switch, .dvm-table-toolbar,
+  .dvm-dialog-backdrop, .dvm-version-panel, .dvm-nav-tabs, .dvm-tab-pills,
+  .dvm-progress-container, .dvm-selection-area, .dvm-howto-card,
+  #btn-help, #btn-export-pdf, #btn-run-all-analyses, #btn-run-selected,
+  #btn-export-excel, #btn-export-selected {
+    display: none !important;
+  }
+  .dvm-analyses-layout { display: block !important; }
+  .dvm-content-panel { padding: 0 !important; min-height: 0 !important; }
+  [id^="section-"] { display: block !important; page-break-inside: auto; }
+  body, .dvm-app-shell { background: #fff !important; }
+  .dvm-table-scroll { max-height: none !important; overflow: visible !important; }
+  .dvm-card, .dvm-card-static, .dvm-chart-card { box-shadow: none !important; }
+}

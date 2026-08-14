@@ -114,19 +114,56 @@ def _get_col_tooltip(col_name: str) -> str:
 # TABLE COMPONENT
 # ===================================================================
 
+_OUTPUT_PARAMS_CACHE: dict = {}
+
+
+def parse_output_params(sql: Optional[str]) -> dict:
+    """Extract column definitions from a SQL Statement Collection script.
+
+    The scripts document their result columns in an ``[OUTPUT PARAMETERS]``
+    header section, one per line as ``- COLUMN:  description`` (descriptions may
+    wrap onto continuation lines). Returns {COLUMN_UPPER: description}.
+    """
+    if not sql:
+        return {}
+    key = hash(sql)
+    cached = _OUTPUT_PARAMS_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    import re
+    defs: dict = {}
+    m = re.search(r"\[OUTPUT PARAMETERS\](.*?)(?:\n[ \t]*\[[A-Z]|\*/)", sql, re.S)
+    if m:
+        current = None
+        for line in m.group(1).splitlines():
+            hit = re.match(r"^\s*-\s*([A-Za-z0-9_]+)\s*:\s*(.*)$", line)
+            if hit:
+                current = hit.group(1).upper().strip()
+                defs[current] = hit.group(2).strip()
+            elif current and line.strip():
+                defs[current] = (defs[current] + " " + line.strip()).strip()
+
+    _OUTPUT_PARAMS_CACHE[key] = defs
+    return defs
+
+
 def results_table(
     df: Optional[pd.DataFrame],
     max_rows: int = 100,
     max_col_width: str = "300px",
     name: Optional[str] = None,
+    sql: Optional[str] = None,
 ) -> html.Div:
     """Render a pandas DataFrame as a professional styled HTML table.
 
-    Column headers show a tooltip (title attribute) with their description.
-    Each table carries a Copy / CSV toolbar handled client-side by
-    assets/table-tools.js (copies/exports only the rows shown). ``name`` sets
-    the CSV download filename.
+    Column headers show a tooltip (title attribute) with their description —
+    taken from the related SQL's ``[OUTPUT PARAMETERS]`` when ``sql`` is given,
+    otherwise a heuristic label. Each table carries a Copy / CSV / Excel toolbar
+    handled client-side by assets/table-tools.js (exports only the rows shown).
+    ``name`` sets the download filename.
     """
+    col_defs = parse_output_params(sql)
     if df is None or df.empty:
         return html.Div(
             [
@@ -154,7 +191,8 @@ def results_table(
                 html.Th(
                     html.Span(
                         col,
-                        title=_get_col_tooltip(col),
+                        title=(col_defs.get(str(col).upper().strip())
+                               or _get_col_tooltip(col)),
                         className="dvm-th-text",
                     ),
                     className="dvm-table-th" + (" dvm-table-num" if col in numeric_cols else ""),
@@ -205,6 +243,14 @@ def results_table(
                 title="Download this table as CSV",
                 **{"data-table-export": "1", "data-table-name": (name or "table"),
                    "data-i18n-title": "table.csvTitle"},
+            ),
+            html.Button(
+                [html.I(className="bi bi-file-earmark-excel"),
+                 html.Span("Excel", **{"data-i18n": "table.excel"})],
+                type="button", className="dvm-table-btn",
+                title="Download this table as Excel",
+                **{"data-table-export-xls": "1", "data-table-name": (name or "table"),
+                   "data-i18n-title": "table.excelTitle"},
             ),
         ],
         className="dvm-table-toolbar",

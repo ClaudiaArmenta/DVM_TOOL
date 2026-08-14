@@ -166,7 +166,8 @@ def render_a1(results: List[dict], revision: str) -> html.Div:
             enrichment_df = res.get("enrichment_df")
             if df is not None and enrichment_df is not None:
                 df = _enrich_a1_df(df, enrichment_df)
-            children.append(results_table(df, max_rows=100))
+            children.append(results_table(df, max_rows=100, name="Top_Tables",
+                                          sql=res.get("sql", "")))
             children.append(collapsible_sql(res.get("sql", "")))
         else:
             children.append(html.Div(
@@ -378,7 +379,19 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
     if not results:
         return html.Div("No results.")
 
-    res = results[0]
+    # Pick the HISTORY result for the chart (a df with a time column + a
+    # memory/disk-used column) so it works regardless of upload order offline.
+    def _is_history(r):
+        d = r.get("df")
+        if d is None or getattr(d, "empty", True):
+            return False
+        up = [str(c).upper() for c in d.columns]
+        has_time = any("DATE" in c or "TIME" in c or c in ("MONTH", "YEAR")
+                       or "SNAPSHOT" in c for c in up)
+        has_val = any(("USED" in c and "GB" in c) or ("HANA_USED" in c) for c in up)
+        return has_time and has_val
+
+    res = next((r for r in results if r.get("success") and _is_history(r)), results[0])
     children.append(_section_header(
         "Memory & Resource History (~1 Year)",
         res.get("source_label", f"generated (rev {revision})"),
@@ -542,7 +555,8 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
     children.append(collapsible_sql(res.get("sql", "")))
-    children.append(results_table(df, max_rows=200, name="Memory_History"))
+    children.append(results_table(df, max_rows=200, name="Memory_History",
+                                  sql=res.get("sql", "")))
     return html.Div(children)
 
 
@@ -636,7 +650,8 @@ def render_a3(results: List[dict], revision: str) -> html.Div:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
     children.append(collapsible_sql(res.get("sql", "")))
-    children.append(results_table(df, max_rows=100))
+    children.append(results_table(df, max_rows=100, name="Memory_Overview",
+                                  sql=res.get("sql", "")))
     return html.Div(children)
 
 
@@ -663,7 +678,9 @@ def render_a4(results: List[dict], revision: str) -> html.Div:
                                         rows=res.get("row_count", 0),
                                         cols=res.get("col_count", 0)))
         if res.get("success"):
-            children.append(results_table(res.get("df"), max_rows=50))
+            children.append(results_table(res.get("df"), max_rows=50,
+                                          name=label.replace(" ", "_"),
+                                          sql=res.get("sql", "")))
             children.append(collapsible_sql(res.get("sql", "")))
         else:
             children.append(html.Div(
@@ -796,7 +813,9 @@ def render_a5(results: List[dict], revision: str) -> html.Div:
         cols=res.get("col_count", 0),
     ))
     if res.get("success"):
-        children.append(results_table(res.get("df"), max_rows=100))
+        children.append(results_table(res.get("df"), max_rows=100,
+                                      name="Partitioned_Tables",
+                                      sql=res.get("sql", "")))
         children.append(collapsible_sql(res.get("sql", "")))
     else:
         children.append(html.Div(
@@ -823,7 +842,9 @@ def render_a6(results: List[dict], revision: str) -> html.Div:
                                            rows=res.get("row_count", 0),
                                            cols=res.get("col_count", 0)))
         if res.get("success"):
-            tab_content.append(results_table(res.get("df"), max_rows=100))
+            tab_content.append(results_table(res.get("df"), max_rows=100,
+                                             name=label.replace(" ", "_"),
+                                             sql=res.get("sql", "")))
             tab_content.append(collapsible_sql(res.get("sql", "")))
         else:
             tab_content.append(html.Div(

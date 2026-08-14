@@ -51,6 +51,8 @@ def create_layout(version_options: List[str]) -> html.Div:
             _build_header(version_options),
             # Version popover panel (hidden by default)
             _build_version_panel(version_options),
+            # Help / FAQ dialog (hidden by default)
+            _build_help_dialog(),
             # Main content area: sidebar + content
             html.Div(
                 [
@@ -100,6 +102,13 @@ def _build_header(version_options: List[str]) -> html.Div:
             ),
             html.Div(
                 [
+                    # Help (FAQ) — opens the help dialog, handled by app-extras.js
+                    html.Button(
+                        html.I(className="bi bi-question-lg"),
+                        id="btn-help", className="dvm-btn-icon",
+                        n_clicks=0, title="Help & FAQ",
+                        **{"aria-label": "Help", "data-i18n-title": "help.btn"},
+                    ),
                     # Theme toggle (light/dark). Icon + behavior handled client-side
                     # by the inline script in app.index_string; persists to localStorage.
                     html.Button(
@@ -138,6 +147,70 @@ def _build_header(version_options: List[str]) -> html.Div:
             ),
         ],
         className="dvm-header",
+    )
+
+
+# ===================================================================
+# HELP / FAQ DIALOG
+# ===================================================================
+
+def _build_help_dialog() -> html.Div:
+    """Help dialog: SAP GUI connection FAQ + suggestions email.
+
+    Shown/hidden client-side by assets/app-extras.js (no callback)."""
+    return html.Div(
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.I(className="bi bi-life-preserver",
+                               style={"fontSize": "18px", "color": "var(--dvm-primary)"}),
+                        html.Span("Help & FAQ", className="dvm-help-title",
+                                  **{"data-i18n": "help.heading"}),
+                        html.Button(html.I(className="bi bi-x-lg"),
+                                    className="dvm-btn-icon", n_clicks=0,
+                                    style={"marginLeft": "auto"},
+                                    **{"data-help-close": "1", "aria-label": "Close"}),
+                    ],
+                    className="dvm-help-head",
+                ),
+                html.H4("It doesn't connect via SAP GUI. What do I do?",
+                        className="dvm-help-q", **{"data-i18n": "help.q1"}),
+                html.P("The tool drives DBACOCKPIT through SAP GUI Scripting, so "
+                       "scripting must be enabled:", **{"data-i18n": "help.a1intro"}),
+                html.Ol(
+                    [
+                        html.Li("Open SAP GUI and log into your system first "
+                                "(keep the session open).",
+                                **{"data-i18n": "help.a1s1"}),
+                        html.Li("Enable the scripting parameter on the server: "
+                                "sapgui/user_scripting = TRUE.",
+                                **{"data-i18n": "help.a1s2"}),
+                        html.Li("In SAP GUI: Options → Accessibility & Scripting → "
+                                "Scripting → check 'Enable scripting' (turn off the "
+                                "notification prompts).",
+                                **{"data-i18n": "help.a1s3"}),
+                        html.Li("Back here, click Detect Sessions / Connect.",
+                                **{"data-i18n": "help.a1s4"}),
+                    ],
+                    className="dvm-help-steps",
+                ),
+                html.Div(
+                    [
+                        html.I(className="bi bi-envelope",
+                               style={"color": "var(--dvm-primary)", "marginRight": "8px"}),
+                        html.Span("Suggestions? Email ", **{"data-i18n": "help.contact"}),
+                        html.A("claudia.armenta@sap.com",
+                               href="mailto:claudia.armenta@sap.com",
+                               style={"color": "var(--dvm-primary)", "fontWeight": "600"}),
+                    ],
+                    className="dvm-help-contact",
+                ),
+            ],
+            className="dvm-help-dialog",
+        ),
+        id="help-backdrop", className="dvm-dialog-backdrop",
+        style={"display": "none"},
     )
 
 
@@ -537,6 +610,12 @@ def _build_overview_section(analyses) -> html.Div:
                                     id="btn-export-selected",
                                     className="btn btn-outline-secondary btn-sm",
                                     n_clicks=0, style={"display": "none"}),
+                        # PDF (print) — visibility mirrored to Export All by app-extras.js
+                        html.Button([html.I(className="bi bi-file-earmark-pdf me-2"),
+                                     html.Span("Export PDF", **{"data-i18n": "btn.exportPdf"})],
+                                    id="btn-export-pdf",
+                                    className="btn btn-outline-secondary btn-sm",
+                                    n_clicks=0, style={"display": "none"}),
                     ],
                     style={"display": "flex", "gap": "8px", "marginBottom": "20px",
                            "alignItems": "center", "flexWrap": "wrap"},
@@ -713,16 +792,19 @@ def _build_offline_screen(analyses) -> html.Div:
                     html.H3("2. Upload Results", className="dvm-section-title",
                             style={"marginBottom": "12px"}),
                     html.Div([
-                        html.Label("Upload for analysis:", style={
-                            "fontSize": "12px", "fontWeight": "600",
-                            "color": "var(--dvm-text-secondary)",
-                            "marginBottom": "4px", "display": "block"}),
+                        html.Label("Assign uploads to (auto-detect, or pick one):",
+                                   style={
+                                       "fontSize": "12px", "fontWeight": "600",
+                                       "color": "var(--dvm-text-secondary)",
+                                       "marginBottom": "4px", "display": "block"},
+                                   **{"data-i18n": "offline.assign"}),
                         dcc.Dropdown(id="offline-upload-target",
-                                     options=[{"label": s["title"].split(": ", 1)[-1]
-                                               if ": " in s["title"] else s["title"],
-                                               "value": s["id"]} for s in analyses],
-                                     value=analyses[0]["id"] if analyses else None,
-                                     clearable=False, style={"fontSize": "13px", "maxWidth": "300px"}),
+                                     options=[{"label": "Auto-detect", "value": "__auto__"}]
+                                     + [{"label": s["title"].split(": ", 1)[-1]
+                                         if ": " in s["title"] else s["title"],
+                                         "value": s["id"]} for s in analyses],
+                                     value="__auto__",
+                                     clearable=False, style={"fontSize": "13px", "maxWidth": "320px"}),
                     ], style={"marginBottom": "12px"}),
                     dcc.Upload(id="offline-upload",
                                children=html.Div([

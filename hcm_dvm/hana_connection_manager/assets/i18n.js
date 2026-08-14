@@ -38,6 +38,22 @@
       "btn.runSelected": "Run Selected",
       "btn.exportAll": "Export All",
       "btn.exportSelected": "Export Selected",
+      "btn.exportPdf": "Export PDF",
+
+      "table.excel": "Excel",
+      "table.excelTitle": "Download this table as Excel",
+
+      "help.btn": "Help & FAQ",
+      "help.heading": "Help & FAQ",
+      "help.q1": "It doesn't connect via SAP GUI. What do I do?",
+      "help.a1intro": "The tool drives DBACOCKPIT through SAP GUI Scripting, so scripting must be enabled:",
+      "help.a1s1": "Open SAP GUI and log into your system first (keep the session open).",
+      "help.a1s2": "Enable the scripting parameter on the server: sapgui/user_scripting = TRUE.",
+      "help.a1s3": "In SAP GUI: Options → Accessibility & Scripting → Scripting → check 'Enable scripting' (turn off the notification prompts).",
+      "help.a1s4": "Back here, click Detect Sessions / Connect.",
+      "help.contact": "Suggestions? Email ",
+
+      "offline.assign": "Assign uploads to (auto-detect, or pick one):",
 
       "sidebar.overview": "Overview",
 
@@ -89,6 +105,22 @@
       "btn.runSelected": "Ejecutar selección",
       "btn.exportAll": "Exportar todo",
       "btn.exportSelected": "Exportar selección",
+      "btn.exportPdf": "Exportar PDF",
+
+      "table.excel": "Excel",
+      "table.excelTitle": "Descargar esta tabla como Excel",
+
+      "help.btn": "Ayuda y FAQ",
+      "help.heading": "Ayuda y preguntas frecuentes",
+      "help.q1": "No conecta por SAP GUI, ¿qué hago?",
+      "help.a1intro": "La herramienta usa DBACOCKPIT vía SAP GUI Scripting, así que el scripting debe estar habilitado:",
+      "help.a1s1": "Abre SAP GUI e inicia sesión en tu sistema primero (deja la sesión abierta).",
+      "help.a1s2": "Habilita el parámetro de scripting en el servidor: sapgui/user_scripting = TRUE.",
+      "help.a1s3": "En SAP GUI: Opciones → Accesibilidad y scripting → Scripting → marca 'Habilitar scripting' (desactiva los avisos de notificación).",
+      "help.a1s4": "Vuelve aquí y pulsa Detectar sesiones / Conectar.",
+      "help.contact": "¿Sugerencias? Escribe a ",
+
+      "offline.assign": "Asignar subidas a (autodetectar o elegir una):",
 
       "sidebar.overview": "Resumen",
 
@@ -140,6 +172,22 @@
       "btn.runSelected": "Executar selecionados",
       "btn.exportAll": "Exportar tudo",
       "btn.exportSelected": "Exportar selecionados",
+      "btn.exportPdf": "Exportar PDF",
+
+      "table.excel": "Excel",
+      "table.excelTitle": "Baixar esta tabela como Excel",
+
+      "help.btn": "Ajuda e FAQ",
+      "help.heading": "Ajuda e perguntas frequentes",
+      "help.q1": "Não conecta via SAP GUI, o que faço?",
+      "help.a1intro": "A ferramenta usa o DBACOCKPIT via SAP GUI Scripting, então o scripting precisa estar habilitado:",
+      "help.a1s1": "Abra o SAP GUI e faça login no seu sistema primeiro (mantenha a sessão aberta).",
+      "help.a1s2": "Habilite o parâmetro de scripting no servidor: sapgui/user_scripting = TRUE.",
+      "help.a1s3": "No SAP GUI: Opções → Acessibilidade e scripting → Scripting → marque 'Habilitar scripting' (desative os avisos de notificação).",
+      "help.a1s4": "Volte aqui e clique em Detectar sessões / Conectar.",
+      "help.contact": "Sugestões? Envie e-mail para ",
+
+      "offline.assign": "Atribuir uploads a (detecção automática ou escolher):",
 
       "sidebar.overview": "Visão geral",
 

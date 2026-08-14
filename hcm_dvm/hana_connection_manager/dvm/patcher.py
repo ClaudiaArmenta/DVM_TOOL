@@ -163,7 +163,7 @@ def patch_param(sql: str, param_name: str, new_value: Union[str, int, float]) ->
     if len(matches) > 1:
         raise ValueError(
             f"Parameter '{param_name}' found {len(matches)} times in Modification "
-            f"Section — expected exactly 1. Cannot safely patch."
+            f"Section - expected exactly 1. Cannot safely patch."
         )
 
     match = matches[0]

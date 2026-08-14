@@ -74,6 +74,20 @@
     });
   }
 
+  // Build an Excel-openable file (HTML-table .xls) from the shown table.
+  function toXLS(table, sheet) {
+    var head = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+      'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+      'xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">' +
+      '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>' +
+      '<x:ExcelWorksheet><x:Name>' + (sheet || "Table").slice(0, 31) +
+      '</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
+      '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+      '<style>td,th{border:1px solid #ccc;padding:4px;} th{background:#eee;font-weight:bold;}</style>' +
+      '</head><body>';
+    return head + table.outerHTML + "</body></html>";
+  }
+
   function download(name, text, mime) {
     var blob = new Blob(["﻿" + text], { type: mime + ";charset=utf-8;" });
     var url = URL.createObjectURL(blob);
@@ -91,22 +105,31 @@
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;
     var copyBtn = e.target.closest("[data-table-copy]");
-    var expBtn = e.target.closest("[data-table-export]");
-    var btn = copyBtn || expBtn;
+    var csvBtn = e.target.closest("[data-table-export]");
+    var xlsBtn = e.target.closest("[data-table-export-xls]");
+    var btn = copyBtn || csvBtn || xlsBtn;
     if (!btn) return;
     var table = tableFor(btn);
     if (!table) return;
     e.preventDefault();
-    var m = matrix(table);
-    if (!m.length) { flash(btn, false); return; }
+
+    function fname(btn) {
+      return (btn.getAttribute("data-table-name") || "table")
+        .replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "table";
+    }
 
     if (copyBtn) {
+      var m = matrix(table);
+      if (!m.length) { flash(btn, false); return; }
       copyText(toTSV(m)).then(function () { flash(btn, true); },
                              function () { flash(btn, false); });
+    } else if (csvBtn) {
+      var mc = matrix(table);
+      if (!mc.length) { flash(btn, false); return; }
+      download(fname(btn) + ".csv", toCSV(mc), "text/csv");
+      flash(btn, true);
     } else {
-      var base = (btn.getAttribute("data-table-name") || "table")
-        .replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "table";
-      download(base + ".csv", toCSV(m), "text/csv");
+      download(fname(btn) + ".xls", toXLS(table, fname(btn)), "application/vnd.ms-excel");
       flash(btn, true);
     }
   });

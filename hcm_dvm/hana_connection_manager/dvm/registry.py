@@ -86,6 +86,13 @@ ANALYSIS_SPECS: List[Dict] = [
                     "TIME_AGGREGATE_BY": "NONE",
                 },
             },
+            {
+                # Feeds the "Situation" snapshot box (disk size, total memory,
+                # column-/row-store split). Authored — see analyses.py.
+                "label": "Current Memory Snapshot",
+                "sql_authored": True,
+                "sql_key": "memory_snapshot",
+            },
         ],
         "renderer": "render_a2",
     },

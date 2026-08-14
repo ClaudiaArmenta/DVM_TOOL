@@ -449,24 +449,42 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
         alloc_col = (find(lambda c: "ALLOC_LIM" in c and "GB" in c)
                      or find(lambda c: "HANA_ALLOC" in c and "GB" in c))
 
-        # ── Current-snapshot columns for the Situation box ──
-        disk_size_col = (find(lambda c: "DISK" in c and "SIZE" in c and "GB" in c)
-                         or find(lambda c: "DISK" in c and "TOTAL" in c and "GB" in c)
-                         or disk_used_col)
-        total_mem_col = (find(lambda c: "TOTAL" in c and ("MEMORY" in c or "MEM" in c) and "GB" in c)
-                         or find(lambda c: ("MEMORY" in c or "MEM" in c) and "SIZE" in c and "GB" in c)
-                         or used_col)
-        cs_col = (find(lambda c: "COLUMN" in c and "STORE" in c)
-                  or find(lambda c: c.startswith("CS_") and "GB" in c)
-                  or find(lambda c: "COLUMN_STORE" in c))
-        rs_col = (find(lambda c: "ROW" in c and "STORE" in c)
-                  or find(lambda c: c.startswith("RS_") and "GB" in c)
-                  or find(lambda c: "ROW_STORE" in c))
+        # ── Situation box: use whichever result df carries snapshot columns ──
+        # (the "Current Memory Snapshot" query online, or an uploaded snapshot
+        # file offline). Only shows when true size / store columns are present.
+        sit_src = None
+        for r in results:
+            d = r.get("df")
+            if d is None or getattr(d, "empty", True):
+                continue
+            up = [str(c).upper().strip() for c in d.columns]
+            if (any("DISK" in c and "SIZE" in c for c in up)
+                    or any("COLUMN" in c and "STORE" in c for c in up)
+                    or any("ROW" in c and "STORE" in c for c in up)
+                    or any("TOTAL" in c and ("MEMORY" in c or "MEM" in c) and "GB" in c
+                           for c in up)):
+                sit_src = d.copy()
+                sit_src.columns = up
+                break
 
-        # Situation summary box (current snapshot)
-        children.append(_build_situation_box(
-            chart_df, "_TS" if has_time else None,
-            disk_size_col, total_mem_col, cs_col, rs_col))
+        if sit_src is not None:
+            scols = list(sit_src.columns)
+
+            def sfind(pred):
+                return next((c for c in scols if pred(c)), None)
+
+            disk_size_col = (sfind(lambda c: "DISK" in c and "SIZE" in c and "GB" in c)
+                             or sfind(lambda c: "DISK" in c and "SIZE" in c))
+            total_mem_col = (sfind(lambda c: "TOTAL" in c and ("MEMORY" in c or "MEM" in c) and "GB" in c)
+                             or sfind(lambda c: ("MEMORY" in c or "MEM" in c) and "SIZE" in c and "GB" in c))
+            cs_col = (sfind(lambda c: "COLUMN" in c and "STORE" in c)
+                      or sfind(lambda c: "COLUMN_STORE" in c))
+            rs_col = (sfind(lambda c: "ROW" in c and "STORE" in c)
+                      or sfind(lambda c: "ROW_STORE" in c))
+            sit_ts = (sfind(lambda c: "SNAPSHOT" in c or "TIMESTAMP" in c)
+                      or sfind(lambda c: c in ("TIME", "DATE", "DATETIME")))
+            children.append(_build_situation_box(
+                sit_src, sit_ts, disk_size_col, total_mem_col, cs_col, rs_col))
 
         if not has_time or (not used_col and not disk_used_col and not alloc_col):
             children.append(html.Div(

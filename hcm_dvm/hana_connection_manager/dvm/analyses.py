@@ -51,6 +51,8 @@ def get_sql_for_query(
     """
     if query_spec.get("sql_authored"):
         sql_key = query_spec["sql_key"]
+        if sql_key == "memory_snapshot":
+            return _MEMORY_SNAPSHOT_SQL, "authored SQL (DVM memory snapshot)"
         sql = _get_nse_sql(sql_key, version_str)
         return sql, "authored SQL (NSE, custom query)"
 
@@ -87,6 +89,28 @@ def get_sql_for_query(
         source_label += " [WARNING: possible stub]"
 
     return sql, source_label
+
+
+# ──────────────────────────────────────────────────────────────
+# A2: Current memory/disk snapshot (feeds the "Situation" box)
+# ──────────────────────────────────────────────────────────────
+# One wide row: current disk (data) size, total used memory, and the
+# column-/row-store split. Column names are what render_a2's Situation box
+# detects. Derived from the SAP Note 1969700 collection views
+# (M_VOLUME_FILES / M_HOST_RESOURCE_UTILIZATION / M_CS_TABLES / M_RS_MEMORY).
+# NOTE: verify against your revision — some views/columns vary by version.
+_MEMORY_SNAPSHOT_SQL = """\
+SELECT
+  (SELECT TO_DECIMAL(ROUND(SUM(USED_SIZE) / 1024 / 1024 / 1024, 2), 15, 2)
+     FROM M_VOLUME_FILES WHERE FILE_TYPE = 'DATA')                     AS "Disk Size (GB)",
+  (SELECT TO_DECIMAL(ROUND(SUM(INSTANCE_TOTAL_MEMORY_USED_SIZE) / 1024 / 1024 / 1024, 2), 15, 2)
+     FROM M_HOST_RESOURCE_UTILIZATION)                                 AS "Total Memory Size (GB)",
+  (SELECT TO_DECIMAL(ROUND(SUM(MEMORY_SIZE_IN_TOTAL) / 1024 / 1024 / 1024, 2), 15, 2)
+     FROM M_CS_TABLES)                                                 AS "Column Store Size (GB)",
+  (SELECT TO_DECIMAL(ROUND(SUM(ALLOCATED_SIZE) / 1024 / 1024 / 1024, 2), 15, 2)
+     FROM M_RS_MEMORY)                                                 AS "Row Store Size (GB)"
+FROM DUMMY
+"""
 
 
 # ──────────────────────────────────────────────────────────────

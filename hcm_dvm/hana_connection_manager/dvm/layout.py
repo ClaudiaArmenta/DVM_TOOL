@@ -528,18 +528,12 @@ def _build_overview_section(analyses) -> html.Div:
                         ),
                         html.Ol(
                             [
-                                html.Li("Connect to HANA via SAP GUI (DBACOCKPIT) with "
-                                        "the Connect button.",
+                                html.Li("Select or detect the database.",
                                         **{"data-i18n": "howto.step1"}),
-                                html.Li("Pick the HANA revision (top-right) so each "
-                                        "analysis uses the matching SQL.",
+                                html.Li("Choose which analyses to run.",
                                         **{"data-i18n": "howto.step2"}),
-                                html.Li("Select the analyses you want and press Run All "
-                                        "or Run Selected.",
+                                html.Li("View the results or export.",
                                         **{"data-i18n": "howto.step3"}),
-                                html.Li("Review each result, then export or copy the "
-                                        "tables you need.",
-                                        **{"data-i18n": "howto.step4"}),
                             ],
                             className="dvm-howto-steps",
                         ),

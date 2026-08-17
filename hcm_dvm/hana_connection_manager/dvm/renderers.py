@@ -48,11 +48,9 @@ def _chart_card(fig, title: str = "") -> html.Div:
     children.append(dcc.Graph(
         figure=fig,
         config={
-            "displayModeBar": "hover",
+            "displayModeBar": True,
             "displaylogo": False,
-            "modeBarButtonsToRemove": ["lasso2d", "select2d", "zoomIn2d",
-                                       "zoomOut2d", "autoScale2d", "pan2d"],
-            "toImageButtonOptions": {"format": "png", "filename": "dvm_chart", "scale": 2},
+            "toImageButtonOptions": {"format": "png", "filename": "dvm_chart"},
         },
         style={"borderRadius": "6px"}))
     return html.Div(children, className="dvm-chart-card")
@@ -175,11 +173,8 @@ def render_a1(results: List[dict], revision: str) -> html.Div:
             enrichment_df = res.get("enrichment_df")
             if df is not None and enrichment_df is not None:
                 df = _enrich_a1_df(df, enrichment_df)
-            children.append(html.Div(
-                [top_rows_control(),
-                 results_table(df, max_rows=100, name="Top_Tables",
-                               sql=res.get("sql", ""))],
-                className="dvm-topn-wrap"))
+            children.append(results_table(df, max_rows=100, name="Top_Tables",
+                                          sql=res.get("sql", "")))
             children.append(collapsible_sql(res.get("sql", "")))
         else:
             children.append(html.Div(
@@ -518,38 +513,41 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
                 className="dvm-warning-card",
             ))
         else:
-            # Group by month and average within each month
-            monthly = chart_df.copy()
-            monthly["_MONTH"] = monthly["_TS"].dt.to_period("M")
+            # Adaptive granularity: short spans (<= ~3 months) are grouped by
+            # week, longer spans by month — so small systems still show detail.
+            ts = chart_df["_TS"]
+            span_days = int((ts.max() - ts.min()).days) if len(ts) else 0
+            if span_days <= 92:
+                freq, keep, tickfmt, gran = "W-MON", 26, "%d %b %y", "Weekly"
+            else:
+                freq, keep, tickfmt, gran = "M", 12, "%b %Y", "Monthly"
+
+            bucketed = chart_df.copy()
+            bucketed["_BUCKET"] = bucketed["_TS"].dt.to_period(freq)
 
             # Only Memory + Disk (no allocation limit).
             agg_cols = {}
             for c in (used_col, disk_used_col):
                 if c:
-                    monthly[c] = _to_num(monthly[c])
+                    bucketed[c] = _to_num(bucketed[c])
                     agg_cols[c] = "mean"
 
-            monthly_agg = (monthly.groupby("_MONTH", as_index=False).agg(agg_cols)
-                           .sort_values("_MONTH"))
-            # Show only the most recent 12 months (or fewer if less data exists).
-            monthly_agg = monthly_agg.tail(12)
-            monthly_agg["_DATE"] = monthly_agg["_MONTH"].apply(lambda p: p.to_timestamp())
-            x_vals = monthly_agg["_DATE"]
-            span = len(monthly_agg)
-            title = ("Monthly Trend — last 12 months" if span >= 12
-                     else f"Monthly Trend — last {span} month(s)")
+            agg = (bucketed.groupby("_BUCKET", as_index=False).agg(agg_cols)
+                   .sort_values("_BUCKET").tail(keep))
+            agg["_DATE"] = agg["_BUCKET"].apply(lambda p: p.to_timestamp())
+            x_vals = agg["_DATE"]
 
             fig = go.Figure()
             if used_col:
                 fig.add_trace(go.Scatter(
-                    x=x_vals, y=monthly_agg[used_col],
+                    x=x_vals, y=agg[used_col],
                     mode="lines+markers", name="Memory Used (GB)",
                     line=dict(color=_CHART_COLORS[0], width=2.5),
                     marker=dict(size=6),
                 ))
             if disk_used_col:
                 fig.add_trace(go.Scatter(
-                    x=x_vals, y=monthly_agg[disk_used_col],
+                    x=x_vals, y=agg[disk_used_col],
                     mode="lines+markers", name="Disk Used Data (GB)",
                     line=dict(color=_CHART_COLORS[2], width=2.5),
                     marker=dict(size=6),
@@ -557,8 +555,8 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
 
             fig.update_layout(height=380, yaxis_title="GB", **_CHART_LAYOUT)
             fig.update_layout(
-                title=dict(text=title, font=dict(size=14)),
-                xaxis=dict(tickformat="%b %Y"),
+                title=dict(text=f"{gran} Resource Trend", font=dict(size=14)),
+                xaxis=dict(tickformat=tickfmt),
             )
             children.append(_chart_card(fig))
 
@@ -844,9 +842,13 @@ def render_a6(results: List[dict], revision: str) -> html.Div:
     children = []
     labels = ["NSE Tables", "NSE Partitions", "NSE Columns"]
 
-    # NSE is "in use" if the NSE tables query returned any rows.
-    nse_df = results[0].get("df") if results else None
-    in_use = nse_df is not None and not getattr(nse_df, "empty", True) and len(nse_df) > 0
+    # NSE is "in use" if ANY of the NSE queries (tables / partitions / columns)
+    # returned rows.
+    def _has_rows(r):
+        d = r.get("df")
+        return d is not None and not getattr(d, "empty", True) and len(d) > 0
+
+    in_use = any(_has_rows(r) for r in results) if results else False
     children.append(html.Div(
         [html.I(className="bi " + ("bi-check-circle-fill" if in_use else "bi-dash-circle"),
                 style={"marginRight": "8px", "fontSize": "16px",

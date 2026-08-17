@@ -44,7 +44,7 @@ ANALYSIS_SPECS: List[Dict] = [
         "queries": [
             {
                 "label": "Top Tables by Disk",
-                "script_base": "HANA_Tables_LargestTables",
+                "script_base": "HANA_Tables_LargestTables_ABAP",
                 "patches": {
                     "ORDER_BY": "TOTAL_DISK",
                     "RESULT_ROWS": 50,
@@ -53,7 +53,7 @@ ANALYSIS_SPECS: List[Dict] = [
             },
             {
                 "label": "Top Tables by Memory",
-                "script_base": "HANA_Tables_LargestTables",
+                "script_base": "HANA_Tables_LargestTables_ABAP",
                 "patches": {
                     "ORDER_BY": "CURRENT_MEM",
                     "RESULT_ROWS": 50,
@@ -83,10 +83,10 @@ ANALYSIS_SPECS: List[Dict] = [
                 "script_base": "HANA_Resources_CPUAndMemory",
                 "patches": {
                     "BEGIN_TIME": "C-D365",
-                    # Aggregate by year/month directly in SQL (like 'YYYY/WW' for
-                    # week): far fewer rows to read from DBACOCKPIT → much faster,
-                    # and already grouped for the monthly chart.
-                    "TIME_AGGREGATE_BY": "YYYY/MM",
+                    # Aggregate by day in SQL (far fewer rows than raw → fast to
+                    # read), while keeping daily granularity so the chart can
+                    # bucket adaptively (weekly for short spans, monthly for long).
+                    "TIME_AGGREGATE_BY": "YYYY/MM/DD",
                 },
             },
             {

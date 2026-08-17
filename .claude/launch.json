@@ -2,10 +2,8 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dvm-tool",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["hcm_dvm/run.py"],
-      "port": 8051
+      "name": "dvm-8052",
+      "url": "http://localhost:8052"
     }
   ]
 }

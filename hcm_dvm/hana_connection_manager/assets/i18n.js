@@ -59,10 +59,9 @@
       "sidebar.overview": "Overview",
 
       "howto.title": "How to use this tool",
-      "howto.step1": "Connect to HANA via SAP GUI (DBACOCKPIT) with the Connect button.",
-      "howto.step2": "Pick the HANA revision (top-right) so each analysis uses the matching SQL.",
-      "howto.step3": "Select the analyses you want and press Run All or Run Selected.",
-      "howto.step4": "Review each result, then export or copy the tables you need.",
+      "howto.step1": "Select or detect the database.",
+      "howto.step2": "Choose which analyses to run.",
+      "howto.step3": "View the results or export.",
       "howto.disclaimer": "Some analyses run heavy SQL and can take a while. If a query seems slow, just give it time. Don't refresh. Results appear as each analysis finishes.",
 
       "info.a1": "Top tables by disk and memory size",
@@ -127,10 +126,9 @@
       "sidebar.overview": "Resumen",
 
       "howto.title": "Cómo usar esta herramienta",
-      "howto.step1": "Conéctate a HANA vía SAP GUI (DBACOCKPIT) con el botón Conectar.",
-      "howto.step2": "Elige la revisión de HANA (arriba a la derecha) para que cada análisis use el SQL correspondiente.",
-      "howto.step3": "Selecciona los análisis que quieras y pulsa Ejecutar todo o Ejecutar selección.",
-      "howto.step4": "Revisa cada resultado y luego exporta o copia las tablas que necesites.",
+      "howto.step1": "Selecciona o detecta la base de datos.",
+      "howto.step2": "Escoge qué análisis ejecutar.",
+      "howto.step3": "Ve los resultados o exporta.",
       "howto.disclaimer": "Algunos análisis ejecutan SQL pesado y pueden tardar. Si una consulta parece lenta, solo dale tiempo, no recargues. Los resultados aparecen conforme cada análisis termina.",
 
       "info.a1": "Tablas más grandes por disco y memoria",
@@ -195,10 +193,9 @@
       "sidebar.overview": "Visão geral",
 
       "howto.title": "Como usar esta ferramenta",
-      "howto.step1": "Conecte-se ao HANA via SAP GUI (DBACOCKPIT) com o botão Conectar.",
-      "howto.step2": "Escolha a revisão do HANA (canto superior direito) para que cada análise use o SQL correspondente.",
-      "howto.step3": "Selecione as análises desejadas e clique em Executar tudo ou Executar selecionados.",
-      "howto.step4": "Revise cada resultado e depois exporte ou copie as tabelas necessárias.",
+      "howto.step1": "Selecione ou detecte o banco de dados.",
+      "howto.step2": "Escolha quais análises executar.",
+      "howto.step3": "Veja os resultados ou exporte.",
       "howto.disclaimer": "Algumas análises executam SQL pesado e podem demorar. Se uma consulta parecer lenta, apenas aguarde, não atualize. Os resultados aparecem conforme cada análise termina.",
 
       "info.a1": "Maiores tabelas por disco e memória",

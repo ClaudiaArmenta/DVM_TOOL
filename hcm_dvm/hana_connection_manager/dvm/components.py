@@ -266,6 +266,26 @@ def results_table(
     )
 
 
+def top_rows_control(options=(10, 20, 30, 50), default=50) -> html.Div:
+    """'Show top N' pills that filter the table right after them (client-side,
+    handled by assets/table-tools.js). Wrap the control + results_table in a
+    div with class 'dvm-topn-wrap'."""
+    return html.Div(
+        [
+            html.Span("Show top:", className="dvm-topn-label",
+                      **{"data-i18n": "table.showTop"}),
+            html.Div(
+                [html.Button(str(n), type="button",
+                             className="dvm-tab-pill" + (" active" if n == default else ""),
+                             **{"data-toprows": str(n)})
+                 for n in options],
+                className="dvm-tab-pills",
+            ),
+        ],
+        className="dvm-topn",
+    )
+
+
 def _format_cell(val, is_numeric: bool) -> str:
     """Format a cell value for display."""
     if val is None or (isinstance(val, float) and pd.isna(val)):

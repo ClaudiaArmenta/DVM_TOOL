@@ -1735,6 +1735,14 @@ textarea.dvm-input,
 .dvm-table-btn.is-ok { color: var(--dvm-success); border-color: var(--dvm-success); }
 .dvm-table-btn.is-err { color: var(--dvm-error); border-color: var(--dvm-error); }
 
+/* "Show top N" control above a table */
+.dvm-topn { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.dvm-topn-label {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--dvm-text-secondary); font-weight: 600;
+}
+.dvm-topn .dvm-tab-pill { min-width: 34px; justify-content: center; }
+
 /* ── Help / FAQ dialog ─────────────────────────────────────────────────── */
 .dvm-dialog-backdrop {
   position: fixed; inset: 0; z-index: 1000;

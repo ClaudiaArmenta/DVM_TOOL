@@ -42,6 +42,7 @@
 
       "table.excel": "Excel",
       "table.excelTitle": "Download this table as Excel",
+      "table.showTop": "Show top:",
 
       "help.btn": "Help & FAQ",
       "help.heading": "Help & FAQ",
@@ -109,6 +110,7 @@
 
       "table.excel": "Excel",
       "table.excelTitle": "Descargar esta tabla como Excel",
+      "table.showTop": "Mostrar top:",
 
       "help.btn": "Ayuda y FAQ",
       "help.heading": "Ayuda y preguntas frecuentes",
@@ -176,6 +178,7 @@
 
       "table.excel": "Excel",
       "table.excelTitle": "Baixar esta tabela como Excel",
+      "table.showTop": "Mostrar top:",
 
       "help.btn": "Ajuda e FAQ",
       "help.heading": "Ajuda e perguntas frequentes",

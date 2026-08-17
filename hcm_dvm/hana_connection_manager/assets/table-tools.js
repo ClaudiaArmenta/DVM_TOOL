@@ -14,6 +14,7 @@
   function matrix(table) {
     var rows = [];
     table.querySelectorAll("thead tr, tbody tr").forEach(function (tr) {
+      if (tr.style.display === "none") return;   // respect the "top N" filter
       var cells = [];
       tr.querySelectorAll("th, td").forEach(function (c) {
         cells.push((c.innerText || c.textContent || "").trim());
@@ -101,6 +102,24 @@
       URL.revokeObjectURL(url);
     }, 120);
   }
+
+  // "Show top N" pills: show only the first N tbody rows of the sibling table.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-toprows]") : null;
+    if (!b) return;
+    e.preventDefault();
+    var wrap = b.closest(".dvm-topn-wrap");
+    if (!wrap) return;
+    var n = parseInt(b.getAttribute("data-toprows"), 10) || 0;
+    var table = wrap.querySelector("table.dvm-table");
+    if (table) {
+      var rows = table.querySelectorAll("tbody tr");
+      for (var i = 0; i < rows.length; i++) rows[i].style.display = (i < n) ? "" : "none";
+    }
+    wrap.querySelectorAll("[data-toprows]").forEach(function (x) {
+      x.classList.toggle("active", x === b);
+    });
+  });
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;

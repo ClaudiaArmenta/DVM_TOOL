@@ -10,7 +10,8 @@ import pandas as pd
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
-from .components import results_table, status_badge, elapsed_badge, row_col_badge, collapsible_sql
+from .components import (results_table, status_badge, elapsed_badge, row_col_badge,
+                         collapsible_sql, top_rows_control)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -44,8 +45,16 @@ def _chart_card(fig, title: str = "") -> html.Div:
             html.Div(title, style={"fontSize": "14px", "fontWeight": "600",
                                    "color": "#1D2D3E", "marginBottom": "8px"})
         )
-    children.append(dcc.Graph(figure=fig, config={"displayModeBar": False},
-                              style={"borderRadius": "6px"}))
+    children.append(dcc.Graph(
+        figure=fig,
+        config={
+            "displayModeBar": "hover",
+            "displaylogo": False,
+            "modeBarButtonsToRemove": ["lasso2d", "select2d", "zoomIn2d",
+                                       "zoomOut2d", "autoScale2d", "pan2d"],
+            "toImageButtonOptions": {"format": "png", "filename": "dvm_chart", "scale": 2},
+        },
+        style={"borderRadius": "6px"}))
     return html.Div(children, className="dvm-chart-card")
 
 
@@ -166,8 +175,11 @@ def render_a1(results: List[dict], revision: str) -> html.Div:
             enrichment_df = res.get("enrichment_df")
             if df is not None and enrichment_df is not None:
                 df = _enrich_a1_df(df, enrichment_df)
-            children.append(results_table(df, max_rows=100, name="Top_Tables",
-                                          sql=res.get("sql", "")))
+            children.append(html.Div(
+                [top_rows_control(),
+                 results_table(df, max_rows=100, name="Top_Tables",
+                               sql=res.get("sql", ""))],
+                className="dvm-topn-wrap"))
             children.append(collapsible_sql(res.get("sql", "")))
         else:
             children.append(html.Div(
@@ -510,15 +522,22 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             monthly = chart_df.copy()
             monthly["_MONTH"] = monthly["_TS"].dt.to_period("M")
 
+            # Only Memory + Disk (no allocation limit).
             agg_cols = {}
-            for c in (used_col, disk_used_col, alloc_col):
+            for c in (used_col, disk_used_col):
                 if c:
                     monthly[c] = _to_num(monthly[c])
                     agg_cols[c] = "mean"
 
-            monthly_agg = monthly.groupby("_MONTH", as_index=False).agg(agg_cols)
+            monthly_agg = (monthly.groupby("_MONTH", as_index=False).agg(agg_cols)
+                           .sort_values("_MONTH"))
+            # Show only the most recent 12 months (or fewer if less data exists).
+            monthly_agg = monthly_agg.tail(12)
             monthly_agg["_DATE"] = monthly_agg["_MONTH"].apply(lambda p: p.to_timestamp())
             x_vals = monthly_agg["_DATE"]
+            span = len(monthly_agg)
+            title = ("Monthly Trend — last 12 months" if span >= 12
+                     else f"Monthly Trend — last {span} month(s)")
 
             fig = go.Figure()
             if used_col:
@@ -526,25 +545,19 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
                     x=x_vals, y=monthly_agg[used_col],
                     mode="lines+markers", name="Memory Used (GB)",
                     line=dict(color=_CHART_COLORS[0], width=2.5),
-                    marker=dict(size=5),
+                    marker=dict(size=6),
                 ))
             if disk_used_col:
                 fig.add_trace(go.Scatter(
                     x=x_vals, y=monthly_agg[disk_used_col],
                     mode="lines+markers", name="Disk Used Data (GB)",
                     line=dict(color=_CHART_COLORS[2], width=2.5),
-                    marker=dict(size=5),
-                ))
-            if alloc_col:
-                fig.add_trace(go.Scatter(
-                    x=x_vals, y=monthly_agg[alloc_col],
-                    mode="lines", name="Allocation Limit (GB)",
-                    line=dict(color=_CHART_COLORS[1], width=2, dash="dot"),
+                    marker=dict(size=6),
                 ))
 
             fig.update_layout(height=380, yaxis_title="GB", **_CHART_LAYOUT)
             fig.update_layout(
-                title=dict(text="Monthly Resource Trend", font=dict(size=14)),
+                title=dict(text=title, font=dict(size=14)),
                 xaxis=dict(tickformat="%b %Y"),
             )
             children.append(_chart_card(fig))
@@ -827,9 +840,27 @@ def render_a5(results: List[dict], revision: str) -> html.Div:
 
 
 def render_a6(results: List[dict], revision: str) -> html.Div:
-    """Render A6 -- NSE (three sub-tabs)."""
+    """Render A6 -- NSE: 'in use?' banner + the three detail tables."""
     children = []
     labels = ["NSE Tables", "NSE Partitions", "NSE Columns"]
+
+    # NSE is "in use" if the NSE tables query returned any rows.
+    nse_df = results[0].get("df") if results else None
+    in_use = nse_df is not None and not getattr(nse_df, "empty", True) and len(nse_df) > 0
+    children.append(html.Div(
+        [html.I(className="bi " + ("bi-check-circle-fill" if in_use else "bi-dash-circle"),
+                style={"marginRight": "8px", "fontSize": "16px",
+                       "color": ("var(--dvm-success)" if in_use
+                                 else "var(--dvm-text-secondary)")}),
+         html.Span("Native Storage Extension (NSE): ",
+                   style={"color": "var(--dvm-text-secondary)"}),
+         html.Span(("In use" if in_use else "Not in use"),
+                   style={"fontWeight": "700",
+                          "color": ("var(--dvm-success)" if in_use
+                                    else "var(--dvm-text)")})],
+        className="dvm-info-card",
+        style={"marginBottom": "16px", "padding": "12px 16px", "alignItems": "center"},
+    ))
 
     sub_tabs = []
     for i, res in enumerate(results):

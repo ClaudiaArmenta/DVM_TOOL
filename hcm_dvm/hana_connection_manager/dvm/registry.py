@@ -83,7 +83,10 @@ ANALYSIS_SPECS: List[Dict] = [
                 "script_base": "HANA_Resources_CPUAndMemory",
                 "patches": {
                     "BEGIN_TIME": "C-D365",
-                    "TIME_AGGREGATE_BY": "NONE",
+                    # Aggregate by year/month directly in SQL (like 'YYYY/WW' for
+                    # week): far fewer rows to read from DBACOCKPIT → much faster,
+                    # and already grouped for the monthly chart.
+                    "TIME_AGGREGATE_BY": "YYYY/MM",
                 },
             },
             {
@@ -169,10 +172,6 @@ ANALYSIS_SPECS: List[Dict] = [
         "description": "Page-loadable (NSE) tables, partitions, and columns.",
         "icon": "bi-layers",
         "group": "nse",
-        # Temporarily disabled — NSE analysis is a work in progress. The full
-        # spec (queries, renderer, export sheets) is kept intact; flip this to
-        # True (or remove it) to re-enable everywhere.
-        "enabled": False,
         "queries": [
             {
                 "label": "NSE Tables",

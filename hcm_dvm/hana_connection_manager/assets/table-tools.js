@@ -104,22 +104,40 @@
   }
 
   // "Show top N" pills: show only the first N tbody rows of the sibling table.
+  function applyTopN(wrap) {
+    var active = wrap.querySelector("[data-toprows].active") || wrap.querySelector("[data-toprows]");
+    if (!active) return;
+    var n = parseInt(active.getAttribute("data-toprows"), 10) || 0;
+    var table = wrap.querySelector("table.dvm-table");
+    if (!table) return;
+    var rows = table.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) rows[i].style.display = (i < n) ? "" : "none";
+  }
+  function applyAllTopN(root) {
+    (root || document).querySelectorAll(".dvm-topn-wrap").forEach(applyTopN);
+  }
   document.addEventListener("click", function (e) {
     var b = e.target.closest ? e.target.closest("[data-toprows]") : null;
     if (!b) return;
     e.preventDefault();
     var wrap = b.closest(".dvm-topn-wrap");
     if (!wrap) return;
-    var n = parseInt(b.getAttribute("data-toprows"), 10) || 0;
-    var table = wrap.querySelector("table.dvm-table");
-    if (table) {
-      var rows = table.querySelectorAll("tbody tr");
-      for (var i = 0; i < rows.length; i++) rows[i].style.display = (i < n) ? "" : "none";
-    }
     wrap.querySelectorAll("[data-toprows]").forEach(function (x) {
       x.classList.toggle("active", x === b);
     });
+    applyTopN(wrap);
   });
+  // Apply the default (and re-apply to content Dash renders later).
+  var topnObs = new MutationObserver(function () {
+    if (topnObs._t) return;
+    topnObs._t = setTimeout(function () { topnObs._t = null; applyAllTopN(document); }, 90);
+  });
+  function startTopN() {
+    applyAllTopN(document);
+    try { topnObs.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startTopN);
+  else startTopN();
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;
@@ -151,5 +169,26 @@
       download(fname(btn) + ".xls", toXLS(table, fname(btn)), "application/vnd.ms-excel");
       flash(btn, true);
     }
+  });
+
+  // Copy a card-style summary (e.g. A4 Top 10) as readable text.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-copy-summary]") : null;
+    if (!b) return;
+    e.preventDefault();
+    var cont = b.closest(".dvm-summary");
+    if (!cont) return;
+    var lines = [];
+    cont.querySelectorAll("ol, ul").forEach(function (list) {
+      var head = list.previousElementSibling;
+      var title = head ? (head.innerText || head.textContent || "").trim() : "";
+      if (title) lines.push(title);
+      list.querySelectorAll("li").forEach(function (li) {
+        lines.push("  " + (li.innerText || li.textContent || "").trim());
+      });
+      lines.push("");
+    });
+    var text = lines.join("\n").trim() || (cont.innerText || "").trim();
+    copyText(text).then(function () { flash(b, true); }, function () { flash(b, false); });
   });
 })();

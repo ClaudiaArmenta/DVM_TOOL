@@ -4,6 +4,7 @@ Each renderer takes a list of result dicts (one per query) and returns a Dash
 component tree. Charts use Plotly with a consistent DVM theme.
 """
 
+import re
 from typing import Dict, List, Optional
 
 import pandas as pd
@@ -244,19 +245,22 @@ def _build_a1_overview(dfs: List[pd.DataFrame]) -> html.Div:
             renames[app_col] = "Application Area"
 
         available = [c for c in cols_out if c in odf.columns]
-        result = odf[available].head(10).copy()
+        result = odf[available].head(30).copy()
         result = result.rename(columns={k: v for k, v in renames.items() if k in result.columns})
         return result
 
-    # Memory overview first
+    # Memory overview first (top 10 by default, switchable to 20/30)
     mem_overview = _extract_overview(mem_df, "MEM", "Memory")
     if mem_overview is not None and not mem_overview.empty:
         sections.append(
             html.Div([
-                html.H4("Top 10 Tables by Memory",
+                html.H4("Top Tables by Memory",
                          style={"fontSize": "14px", "fontWeight": "600",
                                 "color": "#1D2D3E", "marginBottom": "8px"}),
-                results_table(mem_overview, max_rows=10),
+                html.Div([
+                    top_rows_control(options=(10, 20, 30), default=10),
+                    results_table(mem_overview, max_rows=30, name="Top_by_Memory"),
+                ], className="dvm-topn-wrap"),
             ], style={"marginBottom": "20px"})
         )
 
@@ -265,10 +269,13 @@ def _build_a1_overview(dfs: List[pd.DataFrame]) -> html.Div:
     if disk_overview is not None and not disk_overview.empty:
         sections.append(
             html.Div([
-                html.H4("Top 10 Tables by Disk",
+                html.H4("Top Tables by Disk",
                          style={"fontSize": "14px", "fontWeight": "600",
                                 "color": "#1D2D3E", "marginBottom": "8px"}),
-                results_table(disk_overview, max_rows=10),
+                html.Div([
+                    top_rows_control(options=(10, 20, 30), default=10),
+                    results_table(disk_overview, max_rows=30, name="Top_by_Disk"),
+                ], className="dvm-topn-wrap"),
             ], style={"marginBottom": "20px"})
         )
 
@@ -451,7 +458,14 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             chart_df["_TS"] = pd.to_datetime(
                 dict(year=yy, month=mm, day=dd), errors="coerce")
         elif ts_col:
-            chart_df["_TS"] = pd.to_datetime(chart_df[ts_col], errors="coerce", dayfirst=True)
+            # Year-first strings (YYYY/MM/DD, e.g. SNAPSHOT_TIME) parse as ISO;
+            # day-first strings (DD/MM/YYYY, e.g. an offline "Date" column) need
+            # dayfirst=True. Decide from a sample value.
+            _s = chart_df[ts_col].dropna()
+            _sample = str(_s.iloc[0]) if len(_s) else ""
+            _dayfirst = not bool(re.match(r"^\s*\d{4}[/-]", _sample))
+            chart_df["_TS"] = pd.to_datetime(chart_df[ts_col], errors="coerce",
+                                             dayfirst=_dayfirst)
         else:
             chart_df["_TS"] = pd.NaT
 
@@ -799,13 +813,22 @@ def _build_a4_top10(results: List[dict]) -> Optional[html.Div]:
                 [html.I(className="bi bi-trophy me-2",
                         style={"color": "var(--dvm-primary)"}),
                  html.Span("Top 10 Growing Tables (30d Summary)",
-                           style={"fontWeight": "600", "fontSize": "14px"})],
-                style={"marginBottom": "12px"},
+                           style={"fontWeight": "600", "fontSize": "14px"}),
+                 html.Button(
+                     [html.I(className="bi bi-clipboard"),
+                      html.Span("Copy", **{"data-i18n": "table.copy"})],
+                     type="button", className="dvm-table-btn",
+                     title="Copy this summary", style={"marginLeft": "auto"},
+                     **{"data-copy-summary": "1"}),
+                 ],
+                style={"marginBottom": "12px", "display": "flex",
+                       "alignItems": "center", "gap": "6px"},
             ),
             html.Div(cards, style={"display": "flex", "gap": "16px", "flexWrap": "wrap",
                                    "marginBottom": "24px"}),
             html.Hr(style={"margin": "0 0 20px", "borderColor": "var(--dvm-border)"}),
         ],
+        className="dvm-summary",
     )
 
 

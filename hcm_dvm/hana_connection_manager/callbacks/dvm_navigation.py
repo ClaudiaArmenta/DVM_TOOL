@@ -162,8 +162,13 @@ def register(app):
         if not conn_state or not conn_state.get("connected"):
             return no_update, no_update, no_update
 
-        # Only auto-detect if no version is already set
-        if current_version and current_version.get("formatted"):
+        # Identity of the current connection — re-validate the database whenever
+        # we connect to a (new) system, but skip redundant re-runs on the same
+        # connection (e.g. idle refreshes).
+        conn_id = (conn_state.get("session_id") or conn_state.get("system_id")
+                   or conn_state.get("host") or "conn")
+        if (current_version and current_version.get("formatted")
+                and current_version.get("conn_id") == conn_id):
             return no_update, no_update, no_update
 
         try:
@@ -180,7 +185,8 @@ def register(app):
             parsed = parse_hana_version(raw_version)
             formatted = format_version_tuple(parsed)
 
-            version_data = {"raw": raw_version, "parsed": list(parsed), "formatted": formatted}
+            version_data = {"raw": raw_version, "parsed": list(parsed),
+                            "formatted": formatted, "conn_id": conn_id}
             header_text = f"HANA {formatted}"
             return version_data, header_text, formatted
         except Exception:

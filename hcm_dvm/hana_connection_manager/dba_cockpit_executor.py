@@ -193,6 +193,7 @@ class DBACockpitSQLExecutor:
         self._wait(3)
 
         tree = self._find_tree()
+        self._last_node_texts = []
         # Preferred: path-based parent -> child navigation (this tree only
         # answers getNodeKeyByPath by index; child/sibling walks return nothing).
         opened = False
@@ -323,6 +324,107 @@ class DBACockpitSQLExecutor:
             f"'{period}' item not found in the Aggregation Period menu"
         )
 
+    def _record_texts(self, texts):
+        """Accumulate seen node texts (deduped) for diagnostics/error hints."""
+        acc = getattr(self, "_last_node_texts", None)
+        if acc is None:
+            acc = []
+            self._last_node_texts = acc
+        for t in texts:
+            if t and t.strip() and t not in acc:
+                acc.append(t)
+
+    def _node_text_any(self, tree, key, cols) -> str:
+        """Best-effort readable text for a node key (plain + each column)."""
+        for t in self._node_texts(tree, key, cols):
+            if t and t.strip():
+                return t.strip()
+        return ""
+
+    def _open_node_key(self, tree, key, cols) -> bool:
+        """Select and double-click a node key to open its screen."""
+        try:
+            tree.selectedNode = key
+        except Exception:
+            pass
+        for col in list(cols) + [None]:
+            try:
+                if col:
+                    tree.selectItem(key, col)
+                    tree.doubleClickItem(key, col)
+                else:
+                    tree.doubleClickNode(key)
+                self._wait(2.5)
+                return True
+            except Exception:
+                continue
+        return False
+
+    def _open_screen_by_path(self, tree, parent_needle: str,
+                             node_needle: str) -> bool:
+        """Navigate by node PATH: find the top-level parent folder, expand it,
+        then enumerate its children by path index to find and open the target.
+
+        This tree only answers getNodeKeyByPath(index); first-child / sibling
+        walks return nothing, so we address children as '<parent>\\<n>' (trying
+        a few path separators)."""
+        cols = self._tree_columns(tree)
+        seen_texts = []
+
+        # 1. Locate the parent among the top-level nodes ("1".."80").
+        parent_path, parent_key = None, None
+        for i in range(1, 80):
+            try:
+                k = tree.getNodeKeyByPath(str(i))
+            except Exception:
+                k = None
+            if not k:
+                break
+            txt = self._node_text_any(tree, k, cols)
+            if txt:
+                seen_texts.append(txt)
+            if txt and parent_needle.lower() in txt.lower():
+                parent_path, parent_key = str(i), k
+                break
+        if parent_path is None:
+            self._record_texts(seen_texts)
+            return False
+
+        # 2. Expand the parent folder so its children load.
+        for m in ("expandNode", "doubleClickNode"):
+            try:
+                getattr(tree, m)(parent_key)
+            except Exception:
+                pass
+        self._wait(1.5)
+
+        # 3. Enumerate children by path and open the matching one.
+        for sep in ("\\", "/", ";", "|"):
+            found_child = False
+            for j in range(1, 80):
+                cpath = f"{parent_path}{sep}{j}"
+                try:
+                    ckey = tree.getNodeKeyByPath(cpath)
+                except Exception:
+                    ckey = None
+                if not ckey:
+                    break
+                found_child = True
+                ctext = self._node_text_any(tree, ckey, cols)
+                if ctext:
+                    seen_texts.append(ctext)
+                if ctext and node_needle.lower() in ctext.lower():
+                    if self._open_node_key(tree, ckey, cols):
+                        logger.info(
+                            f"  Opened '{ctext}' via path {cpath}"
+                        )
+                        return True
+            if found_child:
+                break  # this separator is the right one; don't try others
+
+        self._record_texts(seen_texts)
+        return False
+
     def _expand_tree_node_by_text(self, tree, needle: str) -> bool:
         """Expand a tree node whose text contains `needle` (best effort)."""
         for nk in self._get_all_node_keys(tree):
@@ -426,48 +528,67 @@ class DBACockpitSQLExecutor:
 
         # Not found — remember what the tree actually contains so the caller can
         # surface it (UI + log) to aid tuning.
-        self._last_node_texts = [t for t in seen_texts if t.strip()]
+        self._record_texts([t for t in seen_texts if t.strip()])
         logger.warning(
             f"  '{needle}' not found. {len(seen_texts)} node texts seen; "
             f"sample: {self._last_node_texts[:60]}"
         )
         return False
 
-    def _poll_for_screen_grid(self) -> Any:
-        """Poll for any result grid to appear on the current screen."""
+    # Column keywords that identify the DB Size History data grid (vs. the
+    # message/status grid that also lives on the screen).
+    _DATA_GRID_KEYWORDS = ("DATE", "MEMORY", "DISK", "DATA", "LOG", "TRACE", "GB")
+
+    def _poll_for_screen_grid(self, prefer_cols=None) -> Any:
+        """Poll for the data result grid to appear on the current screen."""
+        prefer_cols = prefer_cols or self._DATA_GRID_KEYWORDS
         _start = time.time()
         _max_wait = max(self.cfg.sql_exec_wait, 10.0)
         while True:
             err = self._check_status_bar_error()
             if err:
                 raise DBACockpitExecutionError(f"DBACOCKPIT screen error: {err}")
-            grid = self._find_any_grid()
+            grid = self._find_any_grid(prefer_cols)
             if grid is not None:
                 return grid
             if time.time() - _start >= _max_wait:
+                shells = getattr(self, "_seen_shell_types", [])
+                hint = (" Shells seen: " + ", ".join(shells[:20])) if shells else ""
                 raise DBACockpitExecutionError(
-                    f"No result grid found on screen after {_max_wait:.0f}s."
+                    f"No result grid found on screen after {_max_wait:.0f}s.{hint}"
                 )
             self._wait(2.0)
 
-    def _find_any_grid(self) -> Any:
-        """Breadth-first walk of wnd[0] for a grid/ALV control. Prefers one
-        with RowCount > 0."""
+    def _find_any_grid(self, prefer_cols=None) -> Any:
+        """Breadth-first walk of wnd[0] for the DATA result grid. The DBACOCKPIT
+        ALV is usually a GuiShell with SubType 'GridView' (Type has no 'Grid'),
+        and the screen holds MORE than one grid (a message/status grid too), so
+        we score every grid-like candidate by how well its columns match the
+        expected data columns and by row count, and return the best."""
+        prefer_cols = tuple(k.upper() for k in (prefer_cols or ()))
         try:
             root = self.s.findById("wnd[0]")
         except Exception:
             return None
-        found = []
+        candidates = []
+        self._seen_shell_types = []
 
         def walk(obj, depth=0):
-            if depth > 14:
+            if depth > 16:
                 return
             try:
                 t = getattr(obj, "Type", "") or ""
             except Exception:
                 t = ""
-            if "Grid" in t or "ALV" in t:
-                found.append(obj)
+            try:
+                st = getattr(obj, "SubType", "") or ""
+            except Exception:
+                st = ""
+            blob = f"{t}/{st}"
+            if any(x in blob for x in ("Grid", "ALV", "GridView")) or t == "GuiShell":
+                candidates.append(obj)
+                if t == "GuiShell":
+                    self._seen_shell_types.append(blob)
             try:
                 children = obj.Children
                 cnt = int(children.Count)
@@ -480,13 +601,24 @@ class DBACockpitSQLExecutor:
                     continue
 
         walk(root)
-        for g in found:
+
+        best, best_score = None, None
+        for c in candidates:
+            cols = self._get_grid_columns(c)
             try:
-                if g.RowCount > 0:
-                    return g
+                rc = int(c.RowCount)
             except Exception:
-                continue
-        return found[0] if found else None
+                rc = -1
+            if not cols and rc < 0:
+                continue  # not actually a grid
+            col_blob = " ".join(str(x) for x in cols).upper()
+            # Strong bonus per expected keyword found in the columns, then rows.
+            kw_hits = sum(1 for kw in prefer_cols if kw and kw in col_blob)
+            score = kw_hits * 1000 + max(rc, 0)
+            if best_score is None or score > best_score:
+                best, best_score = c, score
+
+        return best
 
     # ══════════════════════════════════════════════════════════════
     # INTERNAL: Tree Navigation

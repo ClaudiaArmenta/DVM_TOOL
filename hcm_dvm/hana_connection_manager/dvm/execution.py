@@ -126,6 +126,76 @@ def run_query(
     return result
 
 
+_SCREEN_MAP = {
+    # screen key -> (node text to open, parent folder to expand, aggregation)
+    "db_size_history": ("DB Size History", "System Inform", "Month"),
+}
+
+
+def run_gui_screen(
+    conn_state: dict,
+    screen: str,
+    *,
+    sid: str = "",
+    label: str = "SCREEN",
+    sql_exec_wait: float = 20.0,
+) -> QueryResult:
+    """Read a DBACOCKPIT *screen* grid (no SQL) into a QueryResult.
+
+    Used by analyses (e.g. A2) that must take their data from a specific
+    DBACOCKPIT screen — the DB Size History screen — rather than running a SQL
+    query. SAP GUI only; native connections return an error.
+    """
+    result = QueryResult(sql=f"[DBACOCKPIT screen: {screen}]")
+
+    if not conn_state or not conn_state.get("connected"):
+        result.error = "Not connected to SAP HANA."
+        return result
+
+    if conn_state.get("type") != "sap_gui":
+        result.error = ("The DB Size History screen can only be read over an "
+                        "SAP GUI (DBACOCKPIT) connection.")
+        return result
+
+    mapping = _SCREEN_MAP.get(screen)
+    if not mapping:
+        result.error = f"Unknown DBACOCKPIT screen: '{screen}'."
+        return result
+    node_needle, parent_needle, aggregation = mapping
+
+    session_id = conn_state.get("session_id", "default")
+    lock = _get_session_lock(session_id)
+
+    try:
+        import pythoncom
+        from hana_connection_manager.sap_gui_connector import SAPGUIConnector
+
+        with lock:
+            pythoncom.CoInitialize()
+            session = SAPGUIConnector().get_session(session_id)
+            cfg = DBACockpitConfig(sid=sid, label=label, sql_exec_wait=sql_exec_wait)
+            executor = DBACockpitSQLExecutor(session, cfg)
+            t0 = time.perf_counter()
+            df = executor.read_screen_grid(node_needle, parent_needle,
+                                           aggregation=aggregation)
+            elapsed = (time.perf_counter() - t0) * 1000.0
+
+        result.success = True
+        result.df = df
+        result.elapsed_ms = elapsed
+        result.row_count = len(df) if df is not None else 0
+        result.col_count = len(df.columns) if df is not None else 0
+
+    except DBACockpitExecutionError as e:
+        result.error = str(e)
+        result.exception_text = traceback.format_exc()
+    except Exception as e:
+        result.error = f"Screen read failed: {type(e).__name__}: {e}"
+        result.exception_text = traceback.format_exc()
+
+    return result
+
+
 def run_query_on_executor(
     executor: DBACockpitSQLExecutor,
     sql: str,

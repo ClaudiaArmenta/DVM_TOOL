@@ -168,6 +168,327 @@ class DBACockpitSQLExecutor:
             )
 
     # ══════════════════════════════════════════════════════════════
+    # PUBLIC API: read a DBACOCKPIT *screen* grid (no SQL)
+    # ══════════════════════════════════════════════════════════════
+
+    def read_screen_grid(self, node_needle: str,
+                         parent_needle: Optional[str] = None,
+                         aggregation: Optional[str] = None) -> pd.DataFrame:
+        """Open /nDBACOCKPIT, navigate the tree to a screen node by its text
+        (e.g. 'DB Size History' under 'System Information') and read its result
+        grid into a DataFrame. No SQL is executed — this reads the screen the
+        transaction already renders.
+
+        Args:
+            node_needle: Case-insensitive substring of the target node text.
+            parent_needle: Optional parent folder to expand first (e.g.
+                           'System Inform') so the leaf becomes reachable.
+            aggregation: Optional 'Aggregation Period' to set on the screen
+                         ('Day' | 'Month' | 'Year'). Best-effort and non-fatal.
+        """
+        s = self.s
+        logger.info(f"  Opening /nDBACOCKPIT for screen '{node_needle}'")
+        s.findById("wnd[0]/tbar[0]/okcd").text = "/ndbacockpit"
+        s.findById("wnd[0]").sendVKey(0)
+        self._wait(3)
+
+        tree = self._find_tree()
+        # Preferred: path-based parent -> child navigation (this tree only
+        # answers getNodeKeyByPath by index; child/sibling walks return nothing).
+        opened = False
+        if parent_needle:
+            try:
+                opened = self._open_screen_by_path(tree, parent_needle, node_needle)
+            except Exception as e:
+                logger.warning(f"  Path navigation failed: {e}")
+        if not opened and not self._open_tree_node_by_text(tree, node_needle):
+            # Surface a sample of the real node labels so the exact text can be
+            # matched (shown in the UI error card, no need to read the log).
+            sample = [t for t in getattr(self, "_last_node_texts", []) if t.strip()]
+            hint = (f" ({len(sample)} nodes) seen: " + " | ".join(sample[:40])) if sample else ""
+            raise DBACockpitExecutionError(
+                f"Could not find a '{node_needle}' node in the DBACOCKPIT tree."
+                f"{hint}"
+            )
+        self._wait(2.5)
+
+        # Surface a late navigation error, if any.
+        err = self._check_status_bar_error()
+        if err:
+            raise DBACockpitExecutionError(f"DBACOCKPIT screen error: {err}")
+
+        # Best-effort: set the 'Aggregation Period' (Day/Month/Year). If it can't
+        # be driven on this build, we still read the grid and roll it up to
+        # monthly downstream, so this never fails the read.
+        if aggregation:
+            try:
+                self._set_aggregation_period(aggregation)
+                self._wait(2.0)
+            except Exception as e:
+                logger.warning(
+                    f"  Could not set Aggregation Period to '{aggregation}': {e}"
+                )
+
+        grid = self._poll_for_screen_grid()
+        df = self._read_grid_direct(grid)
+        logger.info(f"  Screen '{node_needle}' grid: {df.shape[0]} rows")
+        return df
+
+    def _all_controls(self, root, max_depth: int = 14) -> List[Any]:
+        """Breadth-first collect all descendant controls of `root`."""
+        out = []
+
+        def walk(obj, depth=0):
+            if depth > max_depth:
+                return
+            out.append(obj)
+            try:
+                children = obj.Children
+                cnt = int(children.Count)
+            except Exception:
+                return
+            for i in range(cnt):
+                try:
+                    walk(children(i), depth + 1)
+                except Exception:
+                    continue
+
+        walk(root)
+        return out
+
+    @staticmethod
+    def _ctrl_text(obj) -> str:
+        """Concatenate a control's Text / Tooltip / Name for matching."""
+        parts = []
+        for attr in ("Text", "Tooltip", "tooltip", "Name"):
+            try:
+                v = getattr(obj, attr, None)
+                if v:
+                    parts.append(str(v))
+            except Exception:
+                continue
+        return " ".join(parts)
+
+    def _set_aggregation_period(self, period: str):
+        """Press the 'Aggregation Period' button and pick Day/Month/Year.
+
+        The button opens a small menu; we select the item whose text matches
+        `period`. Raises DBACockpitExecutionError if the control/item isn't
+        found (caller treats that as non-fatal).
+        """
+        s = self.s
+        period = str(period).strip()
+
+        # 1. Find the Aggregation Period button anywhere on the screen.
+        btn = None
+        for o in self._all_controls(s.findById("wnd[0]")):
+            try:
+                t = getattr(o, "Type", "") or ""
+            except Exception:
+                t = ""
+            if "Button" in t and "aggregat" in self._ctrl_text(o).lower():
+                btn = o
+                break
+        if btn is None:
+            raise DBACockpitExecutionError("Aggregation Period button not found")
+
+        try:
+            btn.press()
+        except Exception:
+            try:
+                btn.setFocus()
+                s.findById("wnd[0]").sendVKey(0)
+            except Exception:
+                pass
+        self._wait(1.0)
+
+        # 2. Select the period item (menu item / button / label) that appeared.
+        for wnd in ("wnd[1]", "wnd[0]"):
+            try:
+                root = s.findById(wnd)
+            except Exception:
+                continue
+            for o in self._all_controls(root):
+                txt = self._ctrl_text(o).strip().lower()
+                if txt == period.lower() or txt.startswith(period.lower()):
+                    for op in ("select", "press"):
+                        try:
+                            getattr(o, op)()
+                            self._wait(1.2)
+                            logger.info(f"  Aggregation Period set to '{period}'")
+                            return
+                        except Exception:
+                            continue
+        raise DBACockpitExecutionError(
+            f"'{period}' item not found in the Aggregation Period menu"
+        )
+
+    def _expand_tree_node_by_text(self, tree, needle: str) -> bool:
+        """Expand a tree node whose text contains `needle` (best effort)."""
+        for nk in self._get_all_node_keys(tree):
+            try:
+                text = tree.getNodeTextByKey(nk)
+            except Exception:
+                continue
+            if text and needle.lower() in text.lower():
+                try:
+                    tree.selectedNode = nk
+                except Exception:
+                    pass
+                for op in ("expandNode", "doubleClickNode"):
+                    try:
+                        getattr(tree, op)(nk)
+                    except Exception:
+                        pass
+                self._wait(1.2)
+                return True
+        return False
+
+    def _tree_columns(self, tree) -> List[str]:
+        """Column names of a GuiColumnTree (empty for a plain tree)."""
+        for meth in ("GetColumnNames", "getColumnNames"):
+            try:
+                names = getattr(tree, meth)()
+                return [str(c) for c in names]
+            except Exception:
+                continue
+        return []
+
+    def _node_texts(self, tree, nk, cols) -> List[str]:
+        """All readable texts for a node key: plain node text + each column."""
+        texts = []
+        try:
+            t = tree.getNodeTextByKey(nk)
+            if t:
+                texts.append(str(t))
+        except Exception:
+            pass
+        for c in cols:
+            try:
+                t = tree.getItemText(nk, c)
+                if t:
+                    texts.append(str(t))
+            except Exception:
+                continue
+        return texts
+
+    def _expand_all_nodes(self, tree, passes: int = 4):
+        """Expand every folder so collapsed leaves become enumerable. Repeats a
+        few times because expanding a folder can reveal more sub-folders."""
+        for _ in range(passes):
+            keys = self._get_all_node_keys(tree)
+            expanded_any = False
+            for nk in keys:
+                for meth in ("expandNode", "expandNodeKey"):
+                    try:
+                        getattr(tree, meth)(nk)
+                        expanded_any = True
+                        break
+                    except Exception:
+                        continue
+            self._wait(0.8)
+            if not expanded_any:
+                break
+
+    def _open_tree_node_by_text(self, tree, needle: str) -> bool:
+        """Expand the whole tree, then double-click the node whose text (plain or
+        any column) contains `needle`. Column-tree aware; logs candidate texts
+        when nothing matches so the real node label can be seen in the log."""
+        needle_l = needle.lower()
+        self._expand_all_nodes(tree)
+        cols = self._tree_columns(tree)
+        keys = self._get_all_node_keys(tree)
+
+        seen_texts = []
+        for nk in keys:
+            texts = self._node_texts(tree, nk, cols)
+            for t in texts:
+                if t not in seen_texts:
+                    seen_texts.append(t)
+            if not any(needle_l in t.lower() for t in texts):
+                continue
+            try:
+                tree.selectedNode = nk
+            except Exception:
+                pass
+            for col in list(cols) + [None]:
+                try:
+                    if col:
+                        tree.selectItem(nk, col)
+                        tree.doubleClickItem(nk, col)
+                    else:
+                        tree.doubleClickNode(nk)
+                    self._wait(2.5)
+                    logger.info(f"  Opened tree node matching '{needle}'")
+                    return True
+                except Exception:
+                    continue
+
+        # Not found — remember what the tree actually contains so the caller can
+        # surface it (UI + log) to aid tuning.
+        self._last_node_texts = [t for t in seen_texts if t.strip()]
+        logger.warning(
+            f"  '{needle}' not found. {len(seen_texts)} node texts seen; "
+            f"sample: {self._last_node_texts[:60]}"
+        )
+        return False
+
+    def _poll_for_screen_grid(self) -> Any:
+        """Poll for any result grid to appear on the current screen."""
+        _start = time.time()
+        _max_wait = max(self.cfg.sql_exec_wait, 10.0)
+        while True:
+            err = self._check_status_bar_error()
+            if err:
+                raise DBACockpitExecutionError(f"DBACOCKPIT screen error: {err}")
+            grid = self._find_any_grid()
+            if grid is not None:
+                return grid
+            if time.time() - _start >= _max_wait:
+                raise DBACockpitExecutionError(
+                    f"No result grid found on screen after {_max_wait:.0f}s."
+                )
+            self._wait(2.0)
+
+    def _find_any_grid(self) -> Any:
+        """Breadth-first walk of wnd[0] for a grid/ALV control. Prefers one
+        with RowCount > 0."""
+        try:
+            root = self.s.findById("wnd[0]")
+        except Exception:
+            return None
+        found = []
+
+        def walk(obj, depth=0):
+            if depth > 14:
+                return
+            try:
+                t = getattr(obj, "Type", "") or ""
+            except Exception:
+                t = ""
+            if "Grid" in t or "ALV" in t:
+                found.append(obj)
+            try:
+                children = obj.Children
+                cnt = int(children.Count)
+            except Exception:
+                return
+            for i in range(cnt):
+                try:
+                    walk(children(i), depth + 1)
+                except Exception:
+                    continue
+
+        walk(root)
+        for g in found:
+            try:
+                if g.RowCount > 0:
+                    return g
+            except Exception:
+                continue
+        return found[0] if found else None
+
+    # ══════════════════════════════════════════════════════════════
     # INTERNAL: Tree Navigation
     # ══════════════════════════════════════════════════════════════
 
@@ -290,36 +611,96 @@ class DBACockpitSQLExecutor:
             )
 
     def _get_all_node_keys(self, tree) -> List[str]:
-        """Get all node keys from the tree control."""
+        """Get all node keys from the tree control (deduped, deep).
+
+        Uses several strategies and unions them, because SAP tree controls vary
+        in which navigation methods they expose:
+          1. Linear whole-tree walk via getNextNodeKey (display order).
+          2. Top-level nodes by path index ("1".."80"), then descend by
+             first-child + next-sibling.
+          3. The plain first-child / next-sibling BFS from the root.
+        """
         keys = []
+        seen = set()
+
+        def add(k):
+            if k is None:
+                return False
+            k = str(k)
+            if not k or k in seen:
+                return False
+            seen.add(k)
+            keys.append(k)
+            return True
+
+        def call(*names, arg=None):
+            for nm in names:
+                try:
+                    fn = getattr(tree, nm)
+                    return fn(arg) if arg is not None else fn()
+                except Exception:
+                    continue
+            return None
+
+        # ── Strategy 1: linear walk over every node in display order. ──
         try:
-            top_key = tree.getNodeKeyByPath("1")
-            keys.append(top_key)
-            queue = [top_key]
-            for _ in range(200):
-                if not queue:
-                    break
-                current = queue.pop(0)
-                try:
-                    child_key = tree.getNodeFirstChildKey(current)
-                    if child_key:
-                        keys.append(child_key)
-                        queue.append(child_key)
-                except Exception:
-                    pass
-                try:
-                    next_key = tree.getNodeNextSiblingKey(current)
-                    if next_key:
-                        keys.append(next_key)
-                        queue.append(next_key)
-                except Exception:
-                    pass
+            cur = tree.getNodeKeyByPath("1")
         except Exception:
-            for i in range(1, 300):
-                for fmt in [f"       {i}-", f"      {i}-", f"     {i}-",
-                            f"    {i}-", f"   {i}-", f"  {i}-", f" {i}-", f"{i}-",
-                            f"        {i}", f"       {i}", f"      {i}", f"{i}"]:
-                    keys.append(fmt)
+            cur = None
+        guard = 0
+        while cur and guard < 20000:
+            guard += 1
+            if not add(cur):
+                # already visited — advance once more, then stop if still stuck
+                pass
+            nxt = call("getNextNodeKey", "GetNextNodeKey", arg=cur)
+            if not nxt or str(nxt) == str(cur):
+                break
+            cur = nxt
+
+        # ── Strategy 2: top-level by path index, then descend children. ──
+        tops = []
+        for i in range(1, 80):
+            k = None
+            try:
+                k = tree.getNodeKeyByPath(str(i))
+            except Exception:
+                k = None
+            if not k:
+                break
+            add(k)
+            tops.append(str(k))
+
+        # ── Strategy 3: child/sibling descent from every known node. ──
+        stack = list(tops)
+        try:
+            root = tree.getNodeKeyByPath("1")
+            if root:
+                stack.append(str(root))
+        except Exception:
+            pass
+        guard = 0
+        while stack and guard < 40000:
+            guard += 1
+            node = stack.pop()
+            try:
+                child = tree.getNodeFirstChildKey(node)
+            except Exception:
+                child = None
+            while child:
+                is_new = add(child)
+                if is_new:
+                    stack.append(str(child))
+                nxt = None
+                for nm in ("getNodeNextSiblingKey", "getNextNodeKey"):
+                    try:
+                        nxt = getattr(tree, nm)(child)
+                        if nxt:
+                            break
+                    except Exception:
+                        nxt = None
+                child = nxt if (nxt and str(nxt) not in seen) else None
+
         return keys
 
     # ══════════════════════════════════════════════════════════════

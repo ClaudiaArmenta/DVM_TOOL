@@ -36,6 +36,9 @@
 
       "btn.runAll": "Run All",
       "btn.runSelected": "Run Selected",
+      "run.sessions": "Sessions",
+      "btn.cancel": "Cancel",
+      "run.sessionsHint": "The more sessions you open, the sooner the run finishes.",
       "btn.exportAll": "Export All",
       "btn.exportSelected": "Export Selected",
       "btn.exportPdf": "Export PDF",
@@ -77,7 +80,7 @@
       "analysis.a5_partitioned_tables.short": "Partitioned Tables",
 
       "analysis.a1_top_tables.desc": "Largest tables by disk and memory (SAP Note 1969700), enriched with table descriptions.",
-      "analysis.a2_db_size_history.desc": "Memory and disk (data volume) size trend over ~1 year, plus a current situation snapshot (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Memory and disk size from the DBACOCKPIT DB Size History screen, last year grouped by month.",
       "analysis.a3_memory_overview.desc": "Memory resource consumption by subarea.",
       "analysis.a4_top_growing.desc": "Tables with highest growth in records, disk, and memory over 30 days.",
       "analysis.a5_partitioned_tables.desc": "Column-store partitioned tables overview."
@@ -103,6 +106,9 @@
 
       "btn.runAll": "Ejecutar todo",
       "btn.runSelected": "Ejecutar selección",
+      "run.sessions": "Sesiones",
+      "btn.cancel": "Cancelar",
+      "run.sessionsHint": "Entre más sesiones abras, más pronto termina la ejecución.",
       "btn.exportAll": "Exportar todo",
       "btn.exportSelected": "Exportar selección",
       "btn.exportPdf": "Exportar PDF",
@@ -144,7 +150,7 @@
       "analysis.a5_partitioned_tables.short": "Tablas particionadas",
 
       "analysis.a1_top_tables.desc": "Tablas más grandes por disco y memoria (SAP Note 1969700), enriquecidas con descripciones de tablas.",
-      "analysis.a2_db_size_history.desc": "Tendencia de memoria y disco (data volume) durante ~1 año, más un snapshot de la situación actual (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Memoria y disco desde la pantalla DB Size History de DBACOCKPIT, último año agrupado por mes.",
       "analysis.a3_memory_overview.desc": "Consumo de recursos de memoria por subárea.",
       "analysis.a4_top_growing.desc": "Tablas con mayor crecimiento en registros, disco y memoria en 30 días.",
       "analysis.a5_partitioned_tables.desc": "Resumen de tablas particionadas en column-store."
@@ -170,6 +176,9 @@
 
       "btn.runAll": "Executar tudo",
       "btn.runSelected": "Executar selecionados",
+      "run.sessions": "Sessões",
+      "btn.cancel": "Cancelar",
+      "run.sessionsHint": "Quanto mais sessões você abrir, mais cedo a execução termina.",
       "btn.exportAll": "Exportar tudo",
       "btn.exportSelected": "Exportar selecionados",
       "btn.exportPdf": "Exportar PDF",
@@ -211,7 +220,7 @@
       "analysis.a5_partitioned_tables.short": "Tabelas particionadas",
 
       "analysis.a1_top_tables.desc": "Maiores tabelas por disco e memória (SAP Note 1969700), enriquecidas com descrições de tabelas.",
-      "analysis.a2_db_size_history.desc": "Tendência de memória e disco (data volume) ao longo de ~1 ano, mais um snapshot da situação atual (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Memória e disco a partir da tela DB Size History do DBACOCKPIT, último ano agrupado por mês.",
       "analysis.a3_memory_overview.desc": "Consumo de recursos de memória por subárea.",
       "analysis.a4_top_growing.desc": "Tabelas com maior crescimento em registros, disco e memória em 30 dias.",
       "analysis.a5_partitioned_tables.desc": "Visão geral de tabelas particionadas em column-store."

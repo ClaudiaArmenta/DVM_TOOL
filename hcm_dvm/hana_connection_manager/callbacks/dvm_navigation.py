@@ -192,6 +192,22 @@ def register(app):
         except Exception:
             return no_update, no_update, no_update
 
+    # Keep the header version label in sync with the detected version store,
+    # including on page load / reconnect when the (session-persisted) store
+    # already holds a version. This replaces the JS "Detecting…" placeholder
+    # with "HANA <version>" as soon as the version is known.
+    app.clientside_callback(
+        """
+        function(v) {
+            if (v && v.formatted) { return 'HANA ' + v.formatted; }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output("header-version-text", "children", allow_duplicate=True),
+        Input("store-hana-version", "data"),
+        prevent_initial_call="initial_duplicate",
+    )
+
     # ==============================================================
     # Manual Version Detection (button in panel)
     # ==============================================================

@@ -410,15 +410,95 @@ def _extract_time(df_up: pd.DataFrame):
               else pd.Series(1, index=df_up.index))
         return pd.to_datetime(dict(year=yy, month=mm, day=dd), errors="coerce")
     if ts:
-        s = df_up[ts].dropna()
-        sample = str(s.iloc[0]) if len(s) else ""
-        dayfirst = not bool(re.match(r"^\s*\d{4}[/-]", sample))
-        return pd.to_datetime(df_up[ts], errors="coerce", dayfirst=dayfirst)
+        s = df_up[ts].dropna().astype(str).str.strip()
+        sample = s.iloc[0] if len(s) else ""
+        # Choose day/month order from the separator, matching SAP GUI locale
+        # conventions: 'YYYY/..' is ISO (year-first); 'MM/DD/YYYY' with slashes
+        # is US (month-first); 'DD.MM.YYYY' with dots is European (day-first).
+        if re.match(r"^\d{4}[/-]", sample):
+            dayfirst = False
+        elif "." in sample:
+            dayfirst = True
+        else:
+            dayfirst = False
+        # format="mixed" parses each value without pandas' inference warning
+        # (values can be 'YYYY/MM', 'MM/DD/YYYY', full timestamps, etc.).
+        try:
+            return pd.to_datetime(df_up[ts], errors="coerce",
+                                  dayfirst=dayfirst, format="mixed")
+        except (ValueError, TypeError):
+            return pd.to_datetime(df_up[ts], errors="coerce", dayfirst=dayfirst)
     return None
 
 
+def _normalize_screen_history(df: pd.DataFrame):
+    """Roll the DBACOCKPIT 'DB Size History' screen grid up to one row per month
+    for the last year.
+
+    The screen returns daily (or weekly) rows with columns Date / Memory / Disk
+    Data / Disk Log / Disk Trace. This keeps the last 365 days, groups by
+    calendar month, takes each month's end-of-month reading, and returns a df
+    with a 'Date' (YYYY-MM) column plus GB columns named so render_a2 detects
+    the memory and disk series. Returns None if it doesn't look like that grid.
+    """
+    if df is None or getattr(df, "empty", True):
+        return None
+    up = df.copy()
+    up.columns = [str(c).upper().strip() for c in up.columns]
+    cols = list(up.columns)
+
+    date_col = next((c for c in cols if "DATE" in c or "TIME" in c
+                     or "SNAPSHOT" in c or c in ("MONTH", "PERIOD")), None)
+
+    def pick(*needles):
+        for c in cols:
+            if all(n in c for n in needles):
+                return c
+        return None
+
+    mem_col = pick("MEMORY") or pick("MEM")
+    data_col = pick("DISK", "DATA") or (up.columns[cols.index("DATA")] if "DATA" in cols else None)
+    log_col = pick("DISK", "LOG") or ("LOG" if "LOG" in cols else None)
+    trace_col = pick("DISK", "TRACE") or ("TRACE" if "TRACE" in cols else None)
+
+    # Must at least have a date and one size/memory column to be this grid.
+    if not date_col or not (mem_col or data_col):
+        return None
+
+    t = _extract_time(up)
+    if t is None or t.isna().all():
+        return None
+
+    work = pd.DataFrame({"_T": t})
+    src = {"Memory Used GB": mem_col, "Disk Data GB": data_col,
+           "Disk Log GB": log_col, "Disk Trace GB": trace_col}
+    for label, col in src.items():
+        if col and col in up.columns:
+            work[label] = _to_num(up[col])
+    work = work.dropna(subset=["_T"]).sort_values("_T")
+    if work.empty:
+        return None
+
+    # Keep the last 365 days.
+    cutoff = work["_T"].max() - pd.Timedelta(days=365)
+    work = work[work["_T"] >= cutoff]
+    if work.empty:
+        return None
+
+    work["_M"] = work["_T"].dt.to_period("M")
+    idx = work.groupby("_M")["_T"].idxmax()          # end-of-month reading
+    monthly = work.loc[idx].copy()
+
+    out = pd.DataFrame({"Date": monthly["_M"].astype(str)})
+    for label in src:
+        if label in monthly.columns:
+            out[label] = monthly[label].round(2).values
+    return out.sort_values("Date", ascending=False).reset_index(drop=True)
+
+
 def render_a2(results: List[dict], revision: str) -> html.Div:
-    """Render A2 -- DB Size & Memory History with monthly line chart and Situation box."""
+    """Render A2 -- DB Size & Memory History from the DBACOCKPIT DB Size History
+    screen: monthly line chart + downloadable monthly table."""
     children = []
     if not results:
         return html.Div("No results.")
@@ -432,7 +512,8 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
         up = [str(c).upper() for c in d.columns]
         has_time = any("DATE" in c or "TIME" in c or c in ("MONTH", "YEAR")
                        or "SNAPSHOT" in c for c in up)
-        has_val = any(("USED" in c and "GB" in c) or ("HANA_USED" in c) for c in up)
+        has_val = any(("USED" in c and "GB" in c) or ("HANA_USED" in c)
+                      or "MEMORY" in c or ("DISK" in c) for c in up)
         return has_time and has_val
 
     res = next((r for r in results if r.get("success") and _is_history(r)), results[0])
@@ -461,6 +542,16 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             className="dvm-empty-state",
         ))
         return html.Div(children)
+
+    # Roll the DB Size History screen grid up to one row per month (last year),
+    # with chart-friendly column names. Both the chart loop and the table below
+    # then use this monthly rollup as the single source.
+    _monthly = _normalize_screen_history(df)
+    if _monthly is not None and not _monthly.empty:
+        df = _monthly
+        res["df"] = _monthly
+        res["row_count"] = len(_monthly)
+        res["col_count"] = len(_monthly.columns)
 
     try:
         import plotly.graph_objects as go
@@ -566,7 +657,13 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             fig.update_layout(height=380, yaxis_title="GB", showlegend=True,
                               **_CHART_LAYOUT)
             fig.update_layout(
-                title=dict(text=f"{gran} Resource Trend", font=dict(size=14)),
+                # Pin the title to the very top; the extra top margin gives the
+                # horizontal legend its own band below the title (no overlap).
+                title=dict(text=f"{gran} Resource Trend", font=dict(size=14),
+                           x=0, xanchor="left", y=0.97, yanchor="top"),
+                margin=dict(l=50, r=20, t=68, b=40),
+                legend=dict(orientation="h", yanchor="bottom", y=1.04,
+                            xanchor="left", x=0, font=dict(size=11)),
                 xaxis=dict(tickformat=tickfmt),
             )
             children.append(_chart_card(fig))
@@ -576,35 +673,19 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
     except Exception as e:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
-    children.append(_section_header("Memory History (data)",
-                                    res.get("source_label", f"generated (rev {revision})"),
-                                    elapsed_ms=res.get("elapsed_ms", 0),
-                                    rows=res.get("row_count", 0),
-                                    cols=res.get("col_count", 0)))
-    children.append(results_table(df, max_rows=200, name="Memory_History",
+    # DVM "System Information [DB SIZE HISTORY]" slide: the monthly rollup of the
+    # DBACOCKPIT DB Size History screen (Date / Memory / Disk Data / Disk Log /
+    # Disk Trace), downloadable (Copy / CSV / Excel). Same data as the chart.
+    children.append(_section_header(
+        "System Information [DB SIZE HISTORY]",
+        res.get("source_label", f"generated (rev {revision})"),
+        elapsed_ms=res.get("elapsed_ms", 0),
+        rows=res.get("row_count", 0),
+        cols=res.get("col_count", 0)))
+    children.append(results_table(df, max_rows=60,
+                                  name="DB_Size_History_Monthly",
                                   sql=res.get("sql", "")))
     children.append(collapsible_sql(res.get("sql", "")))
-
-    # Disk usage history table + its SQL (the DATA_GB query), if it ran.
-    def _is_disk_df(r):
-        d = r.get("df")
-        if d is None or getattr(d, "empty", True) or r is res:
-            return False
-        up = [str(c).upper().strip() for c in d.columns]
-        return any(c == "DATA_GB" or ("DISK" in c and "GB" in c) for c in up)
-
-    disk_res = next((r for r in results if r.get("success") and _is_disk_df(r)), None)
-    if disk_res is not None:
-        children.append(_section_header(
-            "Disk Usage History (data volume)",
-            disk_res.get("source_label", f"generated (rev {revision})"),
-            elapsed_ms=disk_res.get("elapsed_ms", 0),
-            rows=disk_res.get("row_count", 0),
-            cols=disk_res.get("col_count", 0)))
-        children.append(results_table(disk_res["df"], max_rows=200,
-                                      name="Disk_Usage_History",
-                                      sql=disk_res.get("sql", "")))
-        children.append(collapsible_sql(disk_res.get("sql", "")))
 
     return html.Div(children)
 
@@ -699,7 +780,15 @@ def render_a3(results: List[dict], revision: str) -> html.Div:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
     children.append(collapsible_sql(res.get("sql", "")))
-    children.append(results_table(df, max_rows=100, name="Memory_Overview",
+
+    # Table: only Subarea + Used (GB), per request. Fall back to the full df if
+    # those columns aren't present.
+    up = {c: str(c).upper().strip() for c in df.columns}
+    sub_c = next((c for c in df.columns if "SUBAREA" in up[c]), None)
+    gb_c = next((c for c in df.columns
+                 if ("USED" in up[c] and "GB" in up[c]) or up[c] == "USED_GB"), None)
+    table_df = df[[sub_c, gb_c]].copy() if (sub_c and gb_c) else df
+    children.append(results_table(table_df, max_rows=100, name="Memory_Overview",
                                   sql=res.get("sql", "")))
     return html.Div(children)
 

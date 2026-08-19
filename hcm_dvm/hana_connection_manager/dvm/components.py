@@ -185,6 +185,18 @@ def results_table(
         if display_df[col].dtype.kind in ("i", "f", "u"):
             numeric_cols.add(col)
 
+    # Free-text "details" columns (e.g. PARTITIONING_DETAILS) should wrap and
+    # show in full instead of being cut off with an ellipsis at 300px.
+    def _is_wrap_col(c):
+        u = str(c).upper()
+        return any(k in u for k in ("DETAIL", "CRITERIA", "DEFINITION"))
+    wrap_cols = {c for c in display_df.columns if _is_wrap_col(c)}
+
+    def _cls(base, col):
+        return (base
+                + (" dvm-table-num" if col in numeric_cols else "")
+                + (" dvm-table-wrap" if col in wrap_cols else ""))
+
     header = html.Thead(
         html.Tr(
             [
@@ -195,7 +207,7 @@ def results_table(
                                or _get_col_tooltip(col)),
                         className="dvm-th-text",
                     ),
-                    className="dvm-table-th" + (" dvm-table-num" if col in numeric_cols else ""),
+                    className=_cls("dvm-table-th", col),
                 )
                 for col in display_df.columns
             ]
@@ -211,7 +223,7 @@ def results_table(
             cells.append(
                 html.Td(
                     cell_val,
-                    className="dvm-table-td" + (" dvm-table-num" if col_name in numeric_cols else ""),
+                    className=_cls("dvm-table-td", col_name),
                     title=str(val) if val is not None else "",
                 )
             )

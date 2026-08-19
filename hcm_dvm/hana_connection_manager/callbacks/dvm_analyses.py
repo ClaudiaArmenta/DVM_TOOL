@@ -25,7 +25,9 @@ import pandas as pd
 
 from hana_connection_manager.dvm.registry import get_all_analyses, ANALYSIS_SPECS
 from hana_connection_manager.dvm.analyses import get_sql_for_query, MiniCheckNotFoundError
-from hana_connection_manager.dvm.execution import run_query, QueryResult
+from hana_connection_manager.dvm.execution import (
+    run_query, run_gui_screen, QueryResult,
+)
 from hana_connection_manager.dvm.renderers import RENDERERS
 from hana_connection_manager.dvm.version_select import get_queries_dir
 from hana_connection_manager.dvm.export import export_to_excel
@@ -53,6 +55,22 @@ def _set_run_state(run_id: str, state: dict):
 def _clear_run_state(run_id: str):
     with _run_state_lock:
         _run_state.pop(run_id, None)
+        _cancelled_runs.discard(run_id)
+
+
+# Run IDs the user asked to cancel. The worker checks this between analyses /
+# queries and stops as soon as it can.
+_cancelled_runs: set = set()
+
+
+def _request_cancel(run_id: str):
+    with _run_state_lock:
+        _cancelled_runs.add(run_id)
+
+
+def _is_cancelled(run_id: str) -> bool:
+    with _run_state_lock:
+        return run_id in _cancelled_runs
 
 
 # ===================================================================
@@ -69,6 +87,22 @@ def _get_table_description_sql() -> Optional[str]:
 
 def _execute_single_query(conn_state, query_spec, version_str, sid="", label=""):
     """Execute a single query spec and return a result dict."""
+    # DBACOCKPIT screen path (no SQL): e.g. A2 reads the DB Size History screen.
+    if query_spec.get("gui_screen"):
+        qr = run_gui_screen(conn_state, query_spec["gui_screen"],
+                            sid=sid, label=label)
+        return {
+            "success": qr.success,
+            "sql": qr.sql,
+            "elapsed_ms": qr.elapsed_ms,
+            "row_count": qr.row_count,
+            "col_count": qr.col_count,
+            "error": qr.error,
+            "exception_text": qr.exception_text,
+            "source_label": "DBACOCKPIT screen: System Information > DB Size History",
+            "df": qr.df,
+            "enrichment_df": None,
+        }
     try:
         sql, source_label = get_sql_for_query(query_spec, version_str)
         qr = run_query(conn_state, sql, sid=sid, label=label)
@@ -202,14 +236,27 @@ def _create_parallel_sessions(conn_state, target_total):
 
 
 def _close_parallel_sessions(session_ids):
-    """Close the extra sessions (all but the base), leaving the base open."""
+    """Close ONLY the extra sessions, always leaving the base session open.
+
+    Uses the '/i' OK-code, which closes just that one session window. Do NOT
+    use '/nex' here: '/nex' logs the whole user off and closes EVERY session
+    (that is what previously closed all windows at the end of a run).
+    """
+    if not session_ids:
+        return
+    base_id = session_ids[0]
+    seen = set()
     for sid_ in session_ids[1:]:
+        # Never close the base, never close the same window twice.
+        if not sid_ or sid_ == base_id or sid_ in seen:
+            continue
+        seen.add(sid_)
         try:
             import pythoncom
             from hana_connection_manager.sap_gui_connector import SAPGUIConnector
             pythoncom.CoInitialize()
             ses = SAPGUIConnector().get_session(sid_)
-            ses.findById("wnd[0]/tbar[0]/okcd").text = "/nex"
+            ses.findById("wnd[0]/tbar[0]/okcd").text = "/i"
             ses.findById("wnd[0]").sendVKey(0)
         except Exception as e:
             logger.warning(f"  Could not close extra session {sid_}: {e}")
@@ -252,7 +299,19 @@ def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state
         with ThreadPoolExecutor(max_workers=len(session_ids)) as ex:
             futures = [ex.submit(_run_one, t) for t in tasks]
             for fut in as_completed(futures):
-                aid, qi, r = fut.result()
+                # Stop promptly if the user cancelled: drop the not-yet-started
+                # tasks and break (running ones finish, sessions close in finally).
+                if _is_cancelled(run_id):
+                    for f in futures:
+                        f.cancel()
+                    break
+                try:
+                    aid, qi, r = fut.result()
+                except Exception as e:
+                    # A future should never raise (_run_one swallows errors),
+                    # but guard anyway so one bad task can't abort the loop.
+                    logger.warning(f"  Parallel task crashed: {e}")
+                    continue
                 with lock:
                     slots[aid][qi] = r
                     remaining[aid] -= 1
@@ -266,6 +325,27 @@ def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state
                             state["completed"] += 1
                         state["results"][aid] = results
                     _set_run_state(run_id, state)
+
+        # Reconcile: if any task was lost (crashed future / dropped COM call),
+        # fill its slot with an error result so every analysis still renders
+        # and progress can reach 100% instead of stalling (e.g. at 13/14).
+        with lock:
+            for aid, rem in remaining.items():
+                if rem <= 0:
+                    continue
+                for qi, slot in enumerate(slots[aid]):
+                    if slot is None:
+                        slots[aid][qi] = {
+                            "success": False, "sql": "", "elapsed_ms": 0,
+                            "row_count": 0, "col_count": 0,
+                            "error": "Query did not complete in the parallel run",
+                            "exception_text": "", "source_label": "not completed",
+                            "df": None, "enrichment_df": None,
+                        }
+                state["results"].setdefault(aid, slots[aid])
+            if state["completed"] < state["total"]:
+                state["completed"] = state["total"]
+            _set_run_state(run_id, state)
     finally:
         _close_parallel_sessions(session_ids)
 
@@ -315,22 +395,32 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids,
         try:
             _run_analyses_parallel(run_id, conn_state, version_str, sid,
                                    analyses, state, parallel_n)
+            state["cancelled"] = _is_cancelled(run_id)
             state["done"] = True
             state["current_aid"] = ""
             state["current_label"] = ""
             _set_run_state(run_id, state)
             return
         except Exception as e:
+            if _is_cancelled(run_id):
+                state["cancelled"] = True
+                state["done"] = True
+                _set_run_state(run_id, state)
+                return
             logger.warning(f"Parallel execution failed ({e}); running serially.")
             state["completed"] = 0
             state["results"] = {}
             _set_run_state(run_id, state)
 
     for spec in analyses:
+        if _is_cancelled(run_id):
+            break
         aid = spec["id"]
         state["current_aid"] = aid
         results = []
         for query_spec in spec["queries"]:
+            if _is_cancelled(run_id):
+                break
             state["current_label"] = f"{aid.split('_')[0].upper()}: {query_spec['label']}"
             _set_run_state(run_id, state)
 
@@ -343,7 +433,7 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids,
             _set_run_state(run_id, state)
 
         # Enrichment
-        if spec.get("enrichments"):
+        if not _is_cancelled(run_id) and spec.get("enrichments"):
             state["current_label"] = f"{aid.split('_')[0].upper()}: enrichment"
             _set_run_state(run_id, state)
             results = _run_enrichment(conn_state, spec, results)
@@ -354,6 +444,7 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids,
         state["results"][aid] = results
         _set_run_state(run_id, state)
 
+    state["cancelled"] = _is_cancelled(run_id)
     state["done"] = True
     state["current_aid"] = ""
     state["current_label"] = ""
@@ -383,6 +474,7 @@ def register(app):
             Output("interval-progress", "disabled"),
             Output("progress-container", "style"),
             Output("analyses-run-status", "children"),
+            Output("btn-cancel-run", "style"),
         ]
         + [Output(f"status-dot-{s['id']}", "className", allow_duplicate=True)
            for s in analyses],
@@ -400,8 +492,6 @@ def register(app):
     )
     def start_run(run_all_clicks, run_sel_clicks, conn_state, version_data,
                   selected, par_sessions):
-        n_base = 4
-        n_out = n_base + n_analyses
         triggered = ctx.triggered_id
 
         if not conn_state or not conn_state.get("connected"):
@@ -410,7 +500,7 @@ def register(app):
                  html.Span("Not connected. Please connect first.")],
                 className="dvm-warning-card",
             )
-            return [no_update, no_update, no_update, msg] + [no_update] * n_analyses
+            return [no_update, no_update, no_update, msg, no_update] + [no_update] * n_analyses
 
         if not version_data or not version_data.get("formatted"):
             msg = html.Div(
@@ -418,7 +508,7 @@ def register(app):
                  html.Span("No HANA version detected or selected.")],
                 className="dvm-warning-card",
             )
-            return [no_update, no_update, no_update, msg] + [no_update] * n_analyses
+            return [no_update, no_update, no_update, msg, no_update] + [no_update] * n_analyses
 
         # Determine which analyses to run
         if triggered == "btn-run-all-analyses":
@@ -432,7 +522,7 @@ def register(app):
                  html.Span("No analyses selected.")],
                 className="dvm-info-card",
             )
-            return [no_update, no_update, no_update, msg] + [no_update] * n_analyses
+            return [no_update, no_update, no_update, msg, no_update] + [no_update] * n_analyses
 
         version_str = version_data["formatted"]
         sid = conn_state.get("system_id", "")
@@ -458,7 +548,23 @@ def register(app):
             False,  # enable interval
             {"display": "block"},  # show progress
             "",
+            {"display": "inline-flex"},  # show Cancel button
         ] + dots
+
+    # ==============================================================
+    # Cancel a running batch
+    # ==============================================================
+    @app.callback(
+        Output("progress-text", "children", allow_duplicate=True),
+        Input("btn-cancel-run", "n_clicks"),
+        State("store-run-progress", "data"),
+        prevent_initial_call=True,
+    )
+    def cancel_run(n_clicks, progress_data):
+        if not n_clicks or not progress_data or not progress_data.get("run_id"):
+            return no_update
+        _request_cancel(progress_data["run_id"])
+        return "Cancelling… (finishing the current query)"
 
     # ==============================================================
     # Interval: poll progress + render incrementally
@@ -472,6 +578,7 @@ def register(app):
             Output("store-analysis-results", "data"),
             Output("btn-export-excel", "style"),
             Output("btn-export-selected", "style"),
+            Output("btn-cancel-run", "style", allow_duplicate=True),
         ]
         + [Output(f"tab-content-{s['id']}", "children", allow_duplicate=True) for s in analyses]
         + [Output(f"overview-status-{s['id']}", "className", allow_duplicate=True) for s in analyses]
@@ -486,7 +593,7 @@ def register(app):
         prevent_initial_call=True,
     )
     def poll_progress(n_intervals, progress_data, version_data, current_store):
-        n_base = 7
+        n_base = 8
         n_outputs = n_base + 4 * n_analyses
         if not progress_data or not progress_data.get("run_id"):
             return [no_update] * n_outputs
@@ -560,22 +667,28 @@ def register(app):
                 store_update,
                 no_update,
                 no_update,
+                no_update,  # keep Cancel button as-is (shown)
             ] + tab_contents + overview_statuses + overview_summaries + status_dots
 
-        # Done
+        # Done (or cancelled)
         _clear_run_state(run_id)
+        cancelled = state.get("cancelled", False)
         total_queries = sum(len(r) for r in state["results"].values())
         success_count = sum(1 for results in state["results"].values()
                            for r in results if r["success"])
+        done_text = (f"Cancelled ({success_count}/{total_queries} queries done)"
+                     if cancelled else
+                     f"Done ({success_count}/{total_queries} queries OK)")
 
         return [
-            {"width": "100%"},
-            f"Done ({success_count}/{total_queries} queries OK)",
-            "100%",
+            {"width": f"{pct}%" if cancelled else "100%"},
+            done_text,
+            f"{pct}%" if cancelled else "100%",
             True,  # disable interval
             store_update,
             {"display": "inline-flex"},  # show export all
             {"display": "inline-flex"},  # show export selected
+            {"display": "none"},  # hide Cancel button
         ] + tab_contents + overview_statuses + overview_summaries + status_dots
 
     # ==============================================================

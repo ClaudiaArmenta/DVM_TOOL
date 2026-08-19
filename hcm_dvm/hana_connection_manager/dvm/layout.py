@@ -597,6 +597,36 @@ def _build_overview_section(analyses) -> html.Div:
                                      html.Span("Run Selected", **{"data-i18n": "btn.runSelected"})],
                                     id="btn-run-selected",
                                     className="btn btn-outline-primary", n_clicks=0),
+                        # Cancel a running batch. Hidden until a run starts.
+                        html.Button([html.I(className="bi bi-x-circle me-2"),
+                                     html.Span("Cancel", **{"data-i18n": "btn.cancel"})],
+                                    id="btn-cancel-run",
+                                    className="btn btn-outline-danger", n_clicks=0,
+                                    style={"display": "none"}),
+                        # Parallel DBACOCKPIT sessions selector (SAP GUI only).
+                        # More sessions = analyses run concurrently (faster).
+                        html.Div(
+                            [
+                                html.I(className="bi bi-lightning-charge",
+                                       style={"color": "var(--dvm-text-secondary)"}),
+                                html.Span("Sessions",
+                                          style={"fontSize": "12px", "fontWeight": "500",
+                                                 "color": "var(--dvm-text-secondary)"},
+                                          **{"data-i18n": "run.sessions"}),
+                                dcc.Dropdown(
+                                    id="parallel-sessions",
+                                    options=[{"label": str(n), "value": n}
+                                             for n in range(1, 7)],
+                                    value=1, clearable=False, searchable=False,
+                                    style={"width": "64px", "fontSize": "13px"},
+                                ),
+                            ],
+                            className="dvm-sessions-control",
+                            title=("Open several DBACOCKPIT sessions to run analyses "
+                                   "in parallel (faster). 1 = serial."),
+                            style={"display": "flex", "alignItems": "center",
+                                   "gap": "6px", "marginLeft": "4px"},
+                        ),
                         html.Div(style={"flex": "1"}),
                         html.Button([html.I(className="bi bi-file-earmark-excel me-2"),
                                      html.Span("Export All", **{"data-i18n": "btn.exportAll"})],
@@ -615,8 +645,22 @@ def _build_overview_section(analyses) -> html.Div:
                                     className="btn btn-outline-secondary btn-sm",
                                     n_clicks=0, style={"display": "none"}),
                     ],
-                    style={"display": "flex", "gap": "8px", "marginBottom": "20px",
+                    style={"display": "flex", "gap": "8px", "marginBottom": "8px",
                            "alignItems": "center", "flexWrap": "wrap"},
+                ),
+
+                # Hint: parallel sessions speed up the run.
+                html.Div(
+                    [
+                        html.I(className="bi bi-info-circle me-1",
+                               style={"color": "var(--dvm-text-secondary)"}),
+                        html.Span("The more sessions you open, the sooner the run "
+                                  "finishes.",
+                                  **{"data-i18n": "run.sessionsHint"}),
+                    ],
+                    className="dvm-sessions-hint",
+                    style={"fontSize": "12px", "color": "var(--dvm-text-secondary)",
+                           "marginBottom": "20px"},
                 ),
 
                 # Progress

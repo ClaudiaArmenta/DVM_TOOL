@@ -74,38 +74,19 @@ ANALYSIS_SPECS: List[Dict] = [
     {
         "id": "a2_db_size_history",
         "title": "A2: DB Size & Memory History",
-        "description": ("Memory and disk (data volume) size trend over ~1 year, "
-                        "plus a current situation snapshot (SAP Note 1969700)."),
+        "description": ("Memory and disk size from the DBACOCKPIT DB Size "
+                        "History screen, last year grouped by month."),
         "icon": "bi-graph-up",
         "group": "sizing",
         "queries": [
             {
-                "label": "CPU & Memory History (1y)",
-                "script_base": "HANA_Resources_CPUAndMemory",
-                "patches": {
-                    "BEGIN_TIME": "C-D365",
-                    # Aggregate by day in SQL (far fewer rows than raw → fast to
-                    # read), while keeping daily granularity so the chart can
-                    # bucket adaptively (weekly for short spans, monthly for long).
-                    "TIME_AGGREGATE_BY": "YYYY/MM/DD",
-                },
-            },
-            {
-                # Disk (data volume) size over time — the "Disk GB Used" line.
-                # DATA_GB column; aggregated by day like the memory history.
-                "label": "Disk Usage History (1y)",
-                "script_base": "HANA_Disks_DiskUsage",
-                "patches": {
-                    "BEGIN_TIME": "C-D365",
-                    "TIME_AGGREGATE_BY": "YYYY/MM/DD",
-                },
-            },
-            {
-                # Feeds the "Situation" snapshot box (disk size, total memory,
-                # column-/row-store split). Authored — see analyses.py.
-                "label": "Current Memory Snapshot",
-                "sql_authored": True,
-                "sql_key": "memory_snapshot",
+                # Read straight from the DBACOCKPIT screen
+                # System Information > DB Size History (NO SQL). Columns come
+                # from that grid (Date / Memory / Disk Data / Disk Log / Disk
+                # Trace). render_a2 rolls the rows up to one point per month for
+                # the last year and feeds both the chart and the table.
+                "label": "DB Size History (DBACOCKPIT screen)",
+                "gui_screen": "db_size_history",
             },
         ],
         "renderer": "render_a2",

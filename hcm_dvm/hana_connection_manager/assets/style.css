@@ -737,6 +737,19 @@ body {
   white-space: nowrap;
 }
 
+/* Free-text "details" columns (e.g. PARTITIONING_DETAILS) show in full:
+   wrap onto multiple lines and use a wider column instead of an ellipsis. */
+.dvm-table tbody td.dvm-table-wrap,
+.dvm-table thead th.dvm-table-wrap {
+  max-width: 620px;
+  min-width: 260px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
 /* Sticky first column (table name) */
 .dvm-table tbody td:first-child,
 .dvm-table thead th:first-child {

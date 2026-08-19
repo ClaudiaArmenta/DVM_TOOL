@@ -168,15 +168,123 @@ def _deserialize_results(serialized_list):
 
 
 # ===================================================================
+# PARALLEL EXECUTION (experimental, opt-in via CONN_MGR_PARALLEL_SESSIONS)
+# ===================================================================
+
+def _create_parallel_sessions(conn_state, target_total):
+    """Best-effort: open extra SAP GUI sessions via createSession(). Returns a
+    list of session ids (base first). On any problem returns just [base] so the
+    caller runs serially."""
+    base_id = conn_state.get("session_id")
+    ids = [base_id]
+    if conn_state.get("type") != "sap_gui" or target_total <= 1 or not base_id:
+        return ids
+    try:
+        import time as _t
+        import pythoncom
+        from hana_connection_manager.sap_gui_connector import SAPGUIConnector
+        pythoncom.CoInitialize()
+        base = SAPGUIConnector().get_session(base_id)
+        parent = base.Parent  # the connection (con[x])
+        before = parent.Children.Count
+        for _ in range(target_total - 1):
+            base.createSession()
+            _t.sleep(1.5)
+        after = parent.Children.Count
+        for i in range(before, after):
+            try:
+                ids.append(parent.Children(i).Id)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"  Could not open extra SAP GUI sessions: {e}")
+    return ids
+
+
+def _close_parallel_sessions(session_ids):
+    """Close the extra sessions (all but the base), leaving the base open."""
+    for sid_ in session_ids[1:]:
+        try:
+            import pythoncom
+            from hana_connection_manager.sap_gui_connector import SAPGUIConnector
+            pythoncom.CoInitialize()
+            ses = SAPGUIConnector().get_session(sid_)
+            ses.findById("wnd[0]/tbar[0]/okcd").text = "/nex"
+            ses.findById("wnd[0]").sendVKey(0)
+        except Exception as e:
+            logger.warning(f"  Could not close extra session {sid_}: {e}")
+
+
+def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state, target_total):
+    """Run all base queries across several SAP GUI sessions in parallel. Raises
+    on setup failure so the caller can fall back to serial execution."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    session_ids = _create_parallel_sessions(conn_state, target_total)
+    if len(session_ids) < 2:
+        raise RuntimeError("no extra sessions available")
+    logger.info(f"  Parallel run across {len(session_ids)} DBACOCKPIT sessions")
+
+    specs_by_id = {s["id"]: s for s in analyses}
+    slots = {s["id"]: [None] * len(s["queries"]) for s in analyses}
+    remaining = {s["id"]: len(s["queries"]) for s in analyses}
+    lock = threading.Lock()
+
+    tasks, k = [], 0
+    for spec in analyses:
+        for qi, q in enumerate(spec["queries"]):
+            tasks.append((spec["id"], qi, q, session_ids[k % len(session_ids)]))
+            k += 1
+
+    def _run_one(task):
+        aid, qi, q, sess = task
+        cs = dict(conn_state)
+        cs["session_id"] = sess
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+        except Exception:
+            pass
+        return aid, qi, _execute_single_query(cs, q, version_str, sid=sid,
+                                              label=f"{aid}_{q['label']}")
+
+    try:
+        with ThreadPoolExecutor(max_workers=len(session_ids)) as ex:
+            futures = [ex.submit(_run_one, t) for t in tasks]
+            for fut in as_completed(futures):
+                aid, qi, r = fut.result()
+                with lock:
+                    slots[aid][qi] = r
+                    remaining[aid] -= 1
+                    state["completed"] += 1
+                    state["current_label"] = f"{aid.split('_')[0].upper()}: done"
+                    if remaining[aid] == 0:
+                        results = slots[aid]
+                        spec = specs_by_id[aid]
+                        if spec.get("enrichments"):
+                            results = _run_enrichment(conn_state, spec, results)
+                            state["completed"] += 1
+                        state["results"][aid] = results
+                    _set_run_state(run_id, state)
+    finally:
+        _close_parallel_sessions(session_ids)
+
+
+# ===================================================================
 # WORKER THREAD for live progress
 # ===================================================================
 
-def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids):
-    """Worker thread: executes selected analyses serially, updating progress.
+def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids,
+                         parallel_sessions=None):
+    """Worker thread: executes selected analyses (serial, or parallel across SAP
+    GUI sessions), updating progress. ``parallel_sessions`` (from the UI) sets
+    how many DBACOCKPIT sessions to open; falls back to CONN_MGR_PARALLEL_SESSIONS.
 
     After each analysis completes, its results are immediately available
     in state['results'][aid] for the poll callback to render incrementally.
     """
+    from hana_connection_manager.config import Config
+
     analyses = [s for s in ANALYSIS_SPECS
                 if s["id"] in analysis_ids and s.get("enabled", True)]
     total_queries = sum(len(spec["queries"]) for spec in analyses)
@@ -194,6 +302,29 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids):
         "analysis_ids": analysis_ids,
     }
     _set_run_state(run_id, state)
+
+    # Parallel path (chosen in the UI, else CONN_MGR_PARALLEL_SESSIONS).
+    # Any failure falls back to serial.
+    try:
+        parallel_n = int(parallel_sessions) if parallel_sessions else \
+            getattr(Config, "parallel_sessions", 1)
+    except (ValueError, TypeError):
+        parallel_n = getattr(Config, "parallel_sessions", 1)
+    parallel_n = max(1, min(6, parallel_n))
+    if conn_state.get("type") == "sap_gui" and parallel_n > 1 and analyses:
+        try:
+            _run_analyses_parallel(run_id, conn_state, version_str, sid,
+                                   analyses, state, parallel_n)
+            state["done"] = True
+            state["current_aid"] = ""
+            state["current_label"] = ""
+            _set_run_state(run_id, state)
+            return
+        except Exception as e:
+            logger.warning(f"Parallel execution failed ({e}); running serially.")
+            state["completed"] = 0
+            state["results"] = {}
+            _set_run_state(run_id, state)
 
     for spec in analyses:
         aid = spec["id"]
@@ -263,10 +394,12 @@ def register(app):
             State("store-connection-state", "data"),
             State("store-hana-version", "data"),
             State("checklist-analyses", "value"),
+            State("parallel-sessions", "value"),
         ],
         prevent_initial_call=True,
     )
-    def start_run(run_all_clicks, run_sel_clicks, conn_state, version_data, selected):
+    def start_run(run_all_clicks, run_sel_clicks, conn_state, version_data,
+                  selected, par_sessions):
         n_base = 4
         n_out = n_base + n_analyses
         triggered = ctx.triggered_id
@@ -307,7 +440,7 @@ def register(app):
 
         t = threading.Thread(
             target=_worker_run_analyses,
-            args=(run_id, conn_state, version_str, sid, analysis_ids),
+            args=(run_id, conn_state, version_str, sid, analysis_ids, par_sessions),
             daemon=True,
         )
         t.start()

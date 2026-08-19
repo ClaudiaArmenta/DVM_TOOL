@@ -77,7 +77,7 @@
       "analysis.a5_partitioned_tables.short": "Partitioned Tables",
 
       "analysis.a1_top_tables.desc": "Largest tables by disk and memory (SAP Note 1969700), enriched with table descriptions.",
-      "analysis.a2_db_size_history.desc": "CPU and memory resource trend over ~1 year (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Memory and disk (data volume) size trend over ~1 year, plus a current situation snapshot (SAP Note 1969700).",
       "analysis.a3_memory_overview.desc": "Memory resource consumption by subarea.",
       "analysis.a4_top_growing.desc": "Tables with highest growth in records, disk, and memory over 30 days.",
       "analysis.a5_partitioned_tables.desc": "Column-store partitioned tables overview."
@@ -144,7 +144,7 @@
       "analysis.a5_partitioned_tables.short": "Tablas particionadas",
 
       "analysis.a1_top_tables.desc": "Tablas más grandes por disco y memoria (SAP Note 1969700), enriquecidas con descripciones de tablas.",
-      "analysis.a2_db_size_history.desc": "Tendencia de recursos de CPU y memoria durante ~1 año (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Tendencia de memoria y disco (data volume) durante ~1 año, más un snapshot de la situación actual (SAP Note 1969700).",
       "analysis.a3_memory_overview.desc": "Consumo de recursos de memoria por subárea.",
       "analysis.a4_top_growing.desc": "Tablas con mayor crecimiento en registros, disco y memoria en 30 días.",
       "analysis.a5_partitioned_tables.desc": "Resumen de tablas particionadas en column-store."
@@ -211,7 +211,7 @@
       "analysis.a5_partitioned_tables.short": "Tabelas particionadas",
 
       "analysis.a1_top_tables.desc": "Maiores tabelas por disco e memória (SAP Note 1969700), enriquecidas com descrições de tabelas.",
-      "analysis.a2_db_size_history.desc": "Tendência de recursos de CPU e memória ao longo de ~1 ano (SAP Note 1969700).",
+      "analysis.a2_db_size_history.desc": "Tendência de memória e disco (data volume) ao longo de ~1 ano, mais um snapshot da situação atual (SAP Note 1969700).",
       "analysis.a3_memory_overview.desc": "Consumo de recursos de memória por subárea.",
       "analysis.a4_top_growing.desc": "Tabelas com maior crescimento em registros, disco e memória em 30 dias.",
       "analysis.a5_partitioned_tables.desc": "Visão geral de tabelas particionadas em column-store."

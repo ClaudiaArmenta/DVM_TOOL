@@ -74,7 +74,8 @@ ANALYSIS_SPECS: List[Dict] = [
     {
         "id": "a2_db_size_history",
         "title": "A2: DB Size & Memory History",
-        "description": "CPU and memory resource trend over ~1 year (SAP Note 1969700).",
+        "description": ("Memory and disk (data volume) size trend over ~1 year, "
+                        "plus a current situation snapshot (SAP Note 1969700)."),
         "icon": "bi-graph-up",
         "group": "sizing",
         "queries": [
@@ -86,6 +87,16 @@ ANALYSIS_SPECS: List[Dict] = [
                     # Aggregate by day in SQL (far fewer rows than raw → fast to
                     # read), while keeping daily granularity so the chart can
                     # bucket adaptively (weekly for short spans, monthly for long).
+                    "TIME_AGGREGATE_BY": "YYYY/MM/DD",
+                },
+            },
+            {
+                # Disk (data volume) size over time — the "Disk GB Used" line.
+                # DATA_GB column; aggregated by day like the memory history.
+                "label": "Disk Usage History (1y)",
+                "script_base": "HANA_Disks_DiskUsage",
+                "patches": {
+                    "BEGIN_TIME": "C-D365",
                     "TIME_AGGREGATE_BY": "YYYY/MM/DD",
                 },
             },

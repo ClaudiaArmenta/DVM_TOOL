@@ -46,6 +46,11 @@ def _chart_card(fig, title: str = "") -> html.Div:
             html.Div(title, style={"fontSize": "14px", "fontWeight": "600",
                                    "color": "#1D2D3E", "marginBottom": "8px"})
         )
+    # NOTE: do NOT set responsive=True. Charts mount inside display:none
+    # sections; a responsive graph collapses to 0px there and stays blank.
+    # A non-responsive graph renders at Plotly's default width and is visible
+    # once the section is shown. app-extras.js still nudges a resize so it
+    # fills the panel width when possible.
     children.append(dcc.Graph(
         figure=fig,
         config={
@@ -53,7 +58,7 @@ def _chart_card(fig, title: str = "") -> html.Div:
             "displaylogo": False,
             "toImageButtonOptions": {"format": "png", "filename": "dvm_chart"},
         },
-        style={"borderRadius": "6px"}))
+        style={"borderRadius": "6px", "minHeight": "300px"}))
     return html.Div(children, className="dvm-chart-card")
 
 
@@ -387,6 +392,31 @@ def _build_situation_box(chart_df, ts_col, disk_size_col, total_mem_col,
     )
 
 
+def _extract_time(df_up: pd.DataFrame):
+    """Datetime Series from an uppercased df: prefer YEAR+MONTH(+DAY) columns,
+    else a snapshot/date/time column. Year-first strings parse as ISO, day-first
+    (DD/MM/YYYY) with dayfirst=True."""
+    cols = list(df_up.columns)
+    yr = next((c for c in cols if c in ("YEAR", "YR")), None)
+    mo = next((c for c in cols if c in ("MONTH", "MON", "MTH", "MONTH_NO")), None)
+    dy = next((c for c in cols if c in ("DAY", "DAY_NO")), None)
+    ts = (next((c for c in cols if "SNAPSHOT" in c or "TIMESTAMP" in c), None)
+          or next((c for c in cols if c in ("TIME", "DATE", "DATETIME", "DATE_TIME")), None)
+          or next((c for c in cols if "DATE" in c or "TIME" in c), None))
+    if yr and mo:
+        yy = pd.to_numeric(df_up[yr], errors="coerce")
+        mm = pd.to_numeric(df_up[mo], errors="coerce")
+        dd = (pd.to_numeric(df_up[dy], errors="coerce") if dy
+              else pd.Series(1, index=df_up.index))
+        return pd.to_datetime(dict(year=yy, month=mm, day=dd), errors="coerce")
+    if ts:
+        s = df_up[ts].dropna()
+        sample = str(s.iloc[0]) if len(s) else ""
+        dayfirst = not bool(re.match(r"^\s*\d{4}[/-]", sample))
+        return pd.to_datetime(df_up[ts], errors="coerce", dayfirst=dayfirst)
+    return None
+
+
 def render_a2(results: List[dict], revision: str) -> html.Div:
     """Render A2 -- DB Size & Memory History with monthly line chart and Situation box."""
     children = []
@@ -435,54 +465,6 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
     try:
         import plotly.graph_objects as go
 
-        chart_df = df.copy()
-        chart_df.columns = [c.upper().strip() for c in chart_df.columns]
-        cols = list(chart_df.columns)
-
-        def find(pred):
-            return next((c for c in cols if pred(c)), None)
-
-        # ── Month key: prefer explicit YEAR + MONTH, else a date/timestamp ──
-        year_col = find(lambda c: c in ("YEAR", "YR"))
-        month_col = find(lambda c: c in ("MONTH", "MON", "MTH", "MONTH_NO"))
-        day_col = find(lambda c: c in ("DAY", "DAY_NO"))
-        ts_col = (find(lambda c: "SNAPSHOT" in c or "TIMESTAMP" in c)
-                  or find(lambda c: c in ("TIME", "DATE", "DATETIME", "DATE_TIME"))
-                  or find(lambda c: "DATE" in c or "TIME" in c))
-
-        if year_col and month_col:
-            yy = pd.to_numeric(chart_df[year_col], errors="coerce")
-            mm = pd.to_numeric(chart_df[month_col], errors="coerce")
-            dd = (pd.to_numeric(chart_df[day_col], errors="coerce")
-                  if day_col else pd.Series(1, index=chart_df.index))
-            chart_df["_TS"] = pd.to_datetime(
-                dict(year=yy, month=mm, day=dd), errors="coerce")
-        elif ts_col:
-            # Year-first strings (YYYY/MM/DD, e.g. SNAPSHOT_TIME) parse as ISO;
-            # day-first strings (DD/MM/YYYY, e.g. an offline "Date" column) need
-            # dayfirst=True. Decide from a sample value.
-            _s = chart_df[ts_col].dropna()
-            _sample = str(_s.iloc[0]) if len(_s) else ""
-            _dayfirst = not bool(re.match(r"^\s*\d{4}[/-]", _sample))
-            chart_df["_TS"] = pd.to_datetime(chart_df[ts_col], errors="coerce",
-                                             dayfirst=_dayfirst)
-        else:
-            chart_df["_TS"] = pd.NaT
-
-        has_time = chart_df["_TS"].notna().any()
-        if has_time:
-            chart_df = chart_df.dropna(subset=["_TS"]).sort_values("_TS")
-
-        # ── Value columns for the monthly trend chart ──
-        used_col = (find(lambda c: "HANA_USED" in c and "GB" in c)
-                    or find(lambda c: ("MEMORY" in c or "MEM" in c)
-                            and "USED" in c and "GB" in c))
-        disk_used_col = (find(lambda c: "DISK" in c and "USED" in c and "GB" in c)
-                         or find(lambda c: c == "DISK_USED_GB")
-                         or find(lambda c: "DATA_DISK" in c and "GB" in c))
-        alloc_col = (find(lambda c: "ALLOC_LIM" in c and "GB" in c)
-                     or find(lambda c: "HANA_ALLOC" in c and "GB" in c))
-
         # ── Situation box: use whichever result df carries snapshot columns ──
         # (the "Current Memory Snapshot" query online, or an uploaded snapshot
         # file offline). Only shows when true size / store columns are present.
@@ -520,54 +502,69 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
             children.append(_build_situation_box(
                 sit_src, sit_ts, disk_size_col, total_mem_col, cs_col, rs_col))
 
-        if not has_time or (not used_col and not disk_used_col and not alloc_col):
+        # ── Trend chart: collect Memory + Disk time-series from ALL result dfs.
+        # Memory history and disk-usage history are separate queries, so the two
+        # lines come from different dataframes and are aligned by time bucket. ──
+        def _is_mem(c):
+            return (("HANA_USED" in c and "GB" in c)
+                    or (("MEMORY" in c or "MEM" in c) and "USED" in c and "GB" in c))
+
+        def _is_disk(c):
+            return (c == "DATA_GB" or ("DISK" in c and "USED" in c and "GB" in c)
+                    or ("DISK" in c and "GB" in c))
+
+        series = []  # (label, color_idx, time_series, value_series)
+        picked = set()
+        for r in results:
+            d = r.get("df")
+            if d is None or getattr(d, "empty", True):
+                continue
+            up = d.copy()
+            up.columns = [str(c).upper().strip() for c in up.columns]
+            t = _extract_time(up)
+            if t is None or not t.notna().any():
+                continue
+            mcol = next((c for c in up.columns if _is_mem(c)), None)
+            dcol = next((c for c in up.columns if _is_disk(c)), None)
+            if mcol and "mem" not in picked:
+                series.append(("HANA GB Used", 0, t, _to_num(up[mcol])))
+                picked.add("mem")
+            if dcol and "disk" not in picked:
+                series.append(("Disk GB Used", 2, t, _to_num(up[dcol])))
+                picked.add("disk")
+
+        if not series:
             children.append(html.Div(
                 "Trend chart unavailable: need a date (or Year + Month) column and "
-                "at least one of Memory Used (GB) / Disk Used Data (GB).",
+                "a Memory Used (GB) or Disk (GB) column.",
                 className="dvm-warning-card",
             ))
         else:
-            # Adaptive granularity: short spans (<= ~3 months) are grouped by
-            # week, longer spans by month — so small systems still show detail.
-            ts = chart_df["_TS"]
-            span_days = int((ts.max() - ts.min()).days) if len(ts) else 0
+            # Adaptive granularity from the combined span: short spans (<= ~3
+            # months) grouped by week, longer spans by month.
+            all_ts = pd.concat([s[2].dropna() for s in series])
+            span_days = int((all_ts.max() - all_ts.min()).days) if len(all_ts) else 0
             if span_days <= 92:
                 freq, keep, tickfmt, gran = "W-MON", 26, "%d %b %y", "Weekly"
             else:
                 freq, keep, tickfmt, gran = "M", 12, "%b %Y", "Monthly"
 
-            bucketed = chart_df.copy()
-            bucketed["_BUCKET"] = bucketed["_TS"].dt.to_period(freq)
-
-            # Only Memory + Disk (no allocation limit).
-            agg_cols = {}
-            for c in (used_col, disk_used_col):
-                if c:
-                    bucketed[c] = _to_num(bucketed[c])
-                    agg_cols[c] = "mean"
-
-            agg = (bucketed.groupby("_BUCKET", as_index=False).agg(agg_cols)
-                   .sort_values("_BUCKET").tail(keep))
-            agg["_DATE"] = agg["_BUCKET"].apply(lambda p: p.to_timestamp())
-            x_vals = agg["_DATE"]
-
             fig = go.Figure()
-            if used_col:
+            for (label, cidx, t, v) in series:
+                tmp = pd.DataFrame({"_TS": t, "_V": v}).dropna(subset=["_TS"])
+                if tmp.empty:
+                    continue
+                tmp["_B"] = tmp["_TS"].dt.to_period(freq)
+                g = tmp.groupby("_B")["_V"].mean().sort_index().tail(keep)
                 fig.add_trace(go.Scatter(
-                    x=x_vals, y=agg[used_col],
-                    mode="lines+markers", name="Memory Used (GB)",
-                    line=dict(color=_CHART_COLORS[0], width=2.5),
-                    marker=dict(size=6),
-                ))
-            if disk_used_col:
-                fig.add_trace(go.Scatter(
-                    x=x_vals, y=agg[disk_used_col],
-                    mode="lines+markers", name="Disk Used Data (GB)",
-                    line=dict(color=_CHART_COLORS[2], width=2.5),
+                    x=[p.to_timestamp() for p in g.index], y=list(g.values),
+                    mode="lines+markers", name=label,
+                    line=dict(color=_CHART_COLORS[cidx], width=2.5),
                     marker=dict(size=6),
                 ))
 
-            fig.update_layout(height=380, yaxis_title="GB", **_CHART_LAYOUT)
+            fig.update_layout(height=380, yaxis_title="GB", showlegend=True,
+                              **_CHART_LAYOUT)
             fig.update_layout(
                 title=dict(text=f"{gran} Resource Trend", font=dict(size=14)),
                 xaxis=dict(tickformat=tickfmt),
@@ -579,9 +576,36 @@ def render_a2(results: List[dict], revision: str) -> html.Div:
     except Exception as e:
         children.append(html.Div(f"Chart error: {e}", className="dvm-error-card"))
 
-    children.append(collapsible_sql(res.get("sql", "")))
+    children.append(_section_header("Memory History (data)",
+                                    res.get("source_label", f"generated (rev {revision})"),
+                                    elapsed_ms=res.get("elapsed_ms", 0),
+                                    rows=res.get("row_count", 0),
+                                    cols=res.get("col_count", 0)))
     children.append(results_table(df, max_rows=200, name="Memory_History",
                                   sql=res.get("sql", "")))
+    children.append(collapsible_sql(res.get("sql", "")))
+
+    # Disk usage history table + its SQL (the DATA_GB query), if it ran.
+    def _is_disk_df(r):
+        d = r.get("df")
+        if d is None or getattr(d, "empty", True) or r is res:
+            return False
+        up = [str(c).upper().strip() for c in d.columns]
+        return any(c == "DATA_GB" or ("DISK" in c and "GB" in c) for c in up)
+
+    disk_res = next((r for r in results if r.get("success") and _is_disk_df(r)), None)
+    if disk_res is not None:
+        children.append(_section_header(
+            "Disk Usage History (data volume)",
+            disk_res.get("source_label", f"generated (rev {revision})"),
+            elapsed_ms=disk_res.get("elapsed_ms", 0),
+            rows=disk_res.get("row_count", 0),
+            cols=disk_res.get("col_count", 0)))
+        children.append(results_table(disk_res["df"], max_rows=200,
+                                      name="Disk_Usage_History",
+                                      sql=disk_res.get("sql", "")))
+        children.append(collapsible_sql(disk_res.get("sql", "")))
+
     return html.Div(children)
 
 
@@ -866,12 +890,15 @@ def render_a6(results: List[dict], revision: str) -> html.Div:
     labels = ["NSE Tables", "NSE Partitions", "NSE Columns"]
 
     # NSE is "in use" if ANY of the NSE queries (tables / partitions / columns)
-    # returned rows.
+    # returned rows. Name which parts have data (e.g. "In use — Columns").
     def _has_rows(r):
         d = r.get("df")
         return d is not None and not getattr(d, "empty", True) and len(d) > 0
 
-    in_use = any(_has_rows(r) for r in results) if results else False
+    used_parts = [labels[i].replace("NSE ", "")
+                  for i, r in enumerate(results) if _has_rows(r)]
+    in_use = bool(used_parts)
+    status_text = ("In use: " + ", ".join(used_parts)) if in_use else "Not in use"
     children.append(html.Div(
         [html.I(className="bi " + ("bi-check-circle-fill" if in_use else "bi-dash-circle"),
                 style={"marginRight": "8px", "fontSize": "16px",
@@ -879,7 +906,7 @@ def render_a6(results: List[dict], revision: str) -> html.Div:
                                  else "var(--dvm-text-secondary)")}),
          html.Span("Native Storage Extension (NSE): ",
                    style={"color": "var(--dvm-text-secondary)"}),
-         html.Span(("In use" if in_use else "Not in use"),
+         html.Span(status_text,
                    style={"fontWeight": "700",
                           "color": ("var(--dvm-success)" if in_use
                                     else "var(--dvm-text)")})],

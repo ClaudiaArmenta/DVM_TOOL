@@ -111,17 +111,26 @@ class ConnectionManagerConfig:
     host: str = "0.0.0.0"
     port: int = 8051
     state_file: str = ""
+    # Number of SAP GUI DBACOCKPIT sessions to run queries in parallel.
+    # 1 = serial (default, safest). >1 = experimental parallel execution
+    # (opens extra sessions with createSession); falls back to serial on error.
+    parallel_sessions: int = 1
 
     hana: HANAConnectionConfig = field(default_factory=HANAConnectionConfig)
 
     @classmethod
     def load(cls) -> "ConnectionManagerConfig":
         """Load from environment variables."""
+        try:
+            par = max(1, min(6, int(os.getenv("CONN_MGR_PARALLEL_SESSIONS", "1"))))
+        except ValueError:
+            par = 1
         return cls(
             debug=os.getenv("CONN_MGR_DEBUG", "false").lower() == "true",
             host=os.getenv("CONN_MGR_HOST", "0.0.0.0"),
             port=int(os.getenv("CONN_MGR_PORT", "8051")),
             state_file=os.getenv("CONN_MGR_STATE_FILE", ""),
+            parallel_sessions=par,
             hana=HANAConnectionConfig.from_env(),
         )
 

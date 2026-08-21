@@ -159,7 +159,7 @@ SELECT
   P.PART_ID,
   P.LOAD_UNIT,
   P.RECORD_COUNT,
-  ROUND(P.DISK_SIZE / 1024 / 1024, 2) AS DISK_SIZE_MB,
+  ROUND(P.MEMORY_SIZE_IN_TOTAL / 1024 / 1024, 2) AS MEM_TOTAL_MB,
   ROUND(P.MEMORY_SIZE_IN_MAIN / 1024 / 1024, 2) AS MEM_MAIN_MB,
   ROUND(P.MEMORY_SIZE_IN_PAGE_LOADABLE_MAIN / 1024 / 1024, 2) AS PAGE_LOADABLE_MB
 FROM
@@ -167,7 +167,7 @@ FROM
 WHERE
   P.LOAD_UNIT = 'PAGE'
 ORDER BY
-  P.DISK_SIZE DESC
+  P.MEMORY_SIZE_IN_MAIN DESC
 LIMIT 100
 """
 
@@ -221,8 +221,10 @@ def _get_nse_sql(sql_key: str, version_str: str) -> str:
         return _NSE_PARTITIONS_SQL
 
     elif sql_key == "nse_columns":
-        if version_tuple >= (2, 0, 60):
-            return _NSE_COLUMNS_SQL
+        # Always use the scoped query: it filters to page-loadable (NSE) tables
+        # first and reads only their columns, instead of scanning the whole
+        # M_CS_ALL_COLUMNS view (millions of rows on large systems, which made
+        # this the query that "hangs" A6 on big S/4HANA databases).
         return _NSE_COLUMNS_SQL_PRE060
 
     else:

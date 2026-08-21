@@ -295,15 +295,17 @@ def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state
         return aid, qi, _execute_single_query(cs, q, version_str, sid=sid,
                                               label=f"{aid}_{q['label']}")
 
+    from concurrent.futures import TimeoutError as _FTimeout
+    # Overall deadline so a single stuck SAP GUI query can't stall the whole run
+    # forever. Generous: only rescues true hangs, not legitimately slow queries.
+    _deadline = 600
+    ex = ThreadPoolExecutor(max_workers=len(session_ids))
+    futures = [ex.submit(_run_one, t) for t in tasks]
     try:
-        with ThreadPoolExecutor(max_workers=len(session_ids)) as ex:
-            futures = [ex.submit(_run_one, t) for t in tasks]
-            for fut in as_completed(futures):
-                # Stop promptly if the user cancelled: drop the not-yet-started
-                # tasks and break (running ones finish, sessions close in finally).
+        try:
+            for fut in as_completed(futures, timeout=_deadline):
+                # Stop promptly if the user cancelled.
                 if _is_cancelled(run_id):
-                    for f in futures:
-                        f.cancel()
                     break
                 try:
                     aid, qi, r = fut.result()
@@ -325,10 +327,13 @@ def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state
                             state["completed"] += 1
                         state["results"][aid] = results
                     _set_run_state(run_id, state)
+        except _FTimeout:
+            logger.warning(f"  Parallel run exceeded {_deadline}s; a query appears "
+                           "stuck. Finishing with partial results.")
 
-        # Reconcile: if any task was lost (crashed future / dropped COM call),
-        # fill its slot with an error result so every analysis still renders
-        # and progress can reach 100% instead of stalling (e.g. at 13/14).
+        # Reconcile: if any task was lost (crashed / dropped COM call / cancelled
+        # / timed out), fill its slot so every analysis still renders and
+        # progress reaches 100% instead of stalling (e.g. at 8/12).
         with lock:
             for aid, rem in remaining.items():
                 if rem <= 0:
@@ -347,6 +352,15 @@ def _run_analyses_parallel(run_id, conn_state, version_str, sid, analyses, state
                 state["completed"] = state["total"]
             _set_run_state(run_id, state)
     finally:
+        for f in futures:
+            try:
+                f.cancel()
+            except Exception:
+                pass
+        try:
+            ex.shutdown(wait=False, cancel_futures=True)
+        except TypeError:
+            ex.shutdown(wait=False)
         _close_parallel_sessions(session_ids)
 
 
@@ -428,6 +442,11 @@ def _worker_run_analyses(run_id, conn_state, version_str, sid, analysis_ids,
                 conn_state, query_spec, version_str,
                 sid=sid, label=f"{aid}_{query_spec['label']}",
             )
+            if not r.get("success"):
+                logger.warning(
+                    f"QUERY FAILED [{aid} / {query_spec['label']}]: "
+                    f"{r.get('error')}"
+                )
             results.append(r)
             state["completed"] += 1
             _set_run_state(run_id, state)
